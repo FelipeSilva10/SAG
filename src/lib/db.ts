@@ -1,46 +1,56 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// db.ts — conexão PostgreSQL server-side (equivalente ao ConexaoBD.java)
-//
-// Usa a biblioteca `postgres` (postgres.js), que é mais idiomática para
-// Next.js do que o JDBC/HikariCP do Java.
-//
-// O fallback de porta 5432 → 6543 do Java é resolvido aqui via DATABASE_URL:
-//   - Em produção (Vercel): use a URL do pooler (porta 6543) na env var.
-//   - Em desenvolvimento local: pode usar 5432 direta se não houver firewall.
-//
-// Esta instância é um SINGLETON. O Next.js mantém o módulo em cache entre
-// requests no mesmo processo, então o pool é reutilizado.
-// ─────────────────────────────────────────────────────────────────────────────
+// db.ts — conexão PostgreSQL usando opções explícitas (sem URL parsing)
+// Evita problemas com caracteres especiais na senha e com o pooler do Supabase.
 
 import postgres from "postgres";
 
-const connectionString = process.env.DATABASE_URL!;
-
-if (!connectionString) {
-  throw new Error(
-    "DATABASE_URL não definida. Copie .env.local.example para .env.local e preencha."
-  );
-}
-
-// Declaração global para evitar múltiplas conexões em dev (hot reload)
 declare global {
   // eslint-disable-next-line no-var
   var _sql: ReturnType<typeof postgres> | undefined;
 }
 
 function createConnection() {
-  return postgres(connectionString, {
-    max: 10,           // tamanho do pool (equivalente ao HikariCP maxPoolSize)
-    idle_timeout: 30,  // segundos até fechar conexões ociosas
+  // Tenta ler DATABASE_URL primeiro (deploy na Vercel, etc.)
+  const url = process.env.DATABASE_URL;
+
+  if (url && url.length > 10) {
+    return postgres(url, {
+      max: 10,
+      idle_timeout: 30,
+      connect_timeout: 15,
+      ssl: "require",
+      prepare: false,
+    });
+  }
+
+  // Fallback: opções explícitas (mais robusto para senhas com caracteres especiais)
+  // Equivalente ao POOLER_USER/POOLER_URL/PASS do ConexaoBD.java
+  const host = process.env.DB_HOST ?? "aws-0-sa-east-1.pooler.supabase.com";
+  const port = Number(process.env.DB_PORT ?? "6543");
+  const user = process.env.DB_USER ?? "";
+  const pass = process.env.DB_PASS ?? "";
+  const db   = process.env.DB_NAME ?? "postgres";
+
+  if (!user || !pass) {
+    throw new Error(
+      "Credenciais de banco não encontradas.\n" +
+      "Defina DATABASE_URL ou as variáveis DB_HOST, DB_USER, DB_PASS no .env.local"
+    );
+  }
+
+  return postgres({
+    host,
+    port,
+    user,
+    password: pass,
+    database: db,
+    max: 10,
+    idle_timeout: 30,
     connect_timeout: 15,
-    ssl: "require",    // equivalente ao sslmode=require do Java
-    prepare: false,    // necessário para o pooler do Supabase (pgBouncer)
-    // prepare: false é OBRIGATÓRIO ao usar a porta 6543 (transaction mode)
-    // No Java isso era transparente pois o HikariCP lidava com isso
+    ssl: "require",
+    prepare: false,
   });
 }
 
-// Em desenvolvimento, reutiliza a instância entre hot reloads
 export const sql =
   process.env.NODE_ENV === "development"
     ? (global._sql ?? (global._sql = createConnection()))

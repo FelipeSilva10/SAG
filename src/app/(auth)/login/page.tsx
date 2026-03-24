@@ -37,7 +37,7 @@ export default function LoginPage() {
       setSessao(data.sessao);
 
       const next = new URLSearchParams(window.location.search).get("next");
-      router.push(next ?? "/dashboard/escolas");
+      router.push(next ?? "/escolas");
     } catch {
       toast.error("Erro de conexão. Verifique a rede.");
     } finally {

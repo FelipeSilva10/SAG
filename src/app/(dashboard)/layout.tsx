@@ -19,17 +19,17 @@ interface NavItem {
 }
 
 const NAV_GESTAO: NavItem[] = [
-  { label: "Escolas",      href: "/dashboard/escolas",      icon: <School size={16} /> },
-  { label: "Turmas",       href: "/dashboard/turmas",        icon: <Users size={16} /> },
-  { label: "Alunos",       href: "/dashboard/alunos",        icon: <GraduationCap size={16} /> },
-  { label: "Professores",  href: "/dashboard/professores",   icon: <BookUser size={16} />, adminOnly: true },
+  { label: "Escolas",      href: "/escolas",      icon: <School size={16} /> },
+  { label: "Turmas",       href: "/turmas",        icon: <Users size={16} /> },
+  { label: "Alunos",       href: "/alunos",        icon: <GraduationCap size={16} /> },
+  { label: "Professores",  href: "/professores",   icon: <BookUser size={16} />, adminOnly: true },
 ];
 
 const NAV_MODULOS: NavItem[] = [
-  { label: "Cronograma",     href: "/dashboard/cronograma",  icon: <CalendarDays size={16} /> },
-  { label: "Chamada",        href: "/dashboard/chamada",     icon: <ClipboardCheck size={16} />, teacherOnly: true },
-  { label: "Diário de Aulas",href: "/dashboard/diario",      icon: <BookOpen size={16} />, teacherOnly: true },
-  { label: "Horas",          href: "/dashboard/horas",       icon: <Clock size={16} /> },
+  { label: "Cronograma",     href: "/cronograma",  icon: <CalendarDays size={16} /> },
+  { label: "Chamada",        href: "/chamada",     icon: <ClipboardCheck size={16} />, teacherOnly: true },
+  { label: "Diário de Aulas",href: "/diario",      icon: <BookOpen size={16} />, teacherOnly: true },
+  { label: "Horas",          href: "/horas",       icon: <Clock size={16} /> },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

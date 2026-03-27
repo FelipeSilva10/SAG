@@ -2,8 +2,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { getSupabaseServer } from "@/lib/supabase-server";
 import type { Aluno } from "@/lib/types";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
 const BASE_SELECT = sql`
   SELECT p.id, p.nome, p.email, p.senha, p.turma_id,

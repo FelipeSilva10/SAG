@@ -80,15 +80,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insere chamada e presenças em transação
-    await sql.begin(async (tx) => {
+// Insere chamada e presenças em transação
+    await sql.begin(async (tx: any) => {
       const [chamada] = await tx`
         INSERT INTO chamadas
           (professor_id, turma_id, cronograma_id, data_aula, horario_inicio, horario_fim)
         VALUES (
           ${professorId}::uuid,
           ${turmaId}::uuid,
-          ${cronogramaId ? `${cronogramaId}::uuid` : null},
+          ${cronogramaId ?? null}::uuid,
           ${dataAula}::date,
           ${horarioInicio}::time,
           ${horarioFim}::time

@@ -7,9 +7,9 @@ export async function DELETE(
 ) {
   const { id } = await params;
   try {
-    await sql.begin(async (tx) => {
-      await tx`DELETE FROM chamada_presencas WHERE chamada_id = ${id}::uuid`;
-      await tx`DELETE FROM chamadas WHERE id = ${id}::uuid`;
+    await (sql.begin as Function)(async (tx: any) => {
+    await tx`DELETE FROM chamada_presencas WHERE chamada_id = ${id}::uuid`;
+    await tx`DELETE FROM chamadas WHERE id = ${id}::uuid`;
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

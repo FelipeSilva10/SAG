@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Verifica cookie de sessão (setado pela API de login)
-  const sessionCookie = request.cookies.get("oficina_session");
+  const sessionCookie = request.cookies.get("sag_session");
 
   if (!sessionCookie?.value) {
     const loginUrl = new URL("/login", request.url);

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Seta cookie de sessão httpOnly
     const response = NextResponse.json({ sessao });
-    response.cookies.set("oficina_session", JSON.stringify(sessao), {
+    response.cookies.set("sag_session", JSON.stringify(sessao), {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -90,6 +90,6 @@ export async function POST(request: NextRequest) {
 // DELETE /api/auth/login → logout
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
-  response.cookies.delete("oficina_session");
+  response.cookies.delete("sag_session");
   return response;
 }

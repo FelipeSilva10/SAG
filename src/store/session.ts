@@ -27,7 +27,7 @@ export const useSessionStore = create<SessionStore>()(
       isAdmin: () => get().sessao?.role === "ADMIN",
     }),
     {
-      name: "oficina-session", // chave no localStorage
+      name: "sag-session", // chave no localStorage
     }
   )
 );

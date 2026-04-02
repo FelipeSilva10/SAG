@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               OA
             </div>
             <div>
-              <p className="text-sm font-bold text-white leading-none">Oficina Admin</p>
+              <p className="text-sm font-bold text-white leading-none">sag</p>
               <p className="text-xs text-gray-500 mt-0.5 leading-none truncate max-w-[100px]">
                 {sessao?.nome ?? "—"}
               </p>
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="px-3 py-4 border-t border-gray-700 space-y-2">
           <div className="px-2 py-1.5 rounded-lg" style={{ background: "#2d3748" }}>
             <p className="text-xs text-gray-400">
-              {isAdmin() ? "👑 Administrador" : "🧑‍🏫 Professor"}
+              {isAdmin() ? "Administrador" : "Professor"}
             </p>
           </div>
           <button
@@ -126,7 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Header */}
         <header className="flex-none h-14 flex items-center px-6 bg-white border-b border-gray-200">
           <div className="flex items-center gap-1.5 text-sm text-gray-500">
-            <span className="font-medium text-gray-900">Oficina Admin</span>
+            <span className="font-medium text-gray-900">sag</span>
             {currentItem && (
               <>
                 <ChevronRight size={14} className="text-gray-300" />

@@ -7,8 +7,8 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
-  title: "Oficina Admin",
-  description: "Painel de gestão da plataforma Oficina do Amanhã",
+  title: "SAG",
+  description: "Painel de gestão",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

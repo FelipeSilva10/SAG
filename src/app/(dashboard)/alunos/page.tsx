@@ -142,11 +142,11 @@ export default function AlunosPage() {
     for (const nomeAluno of linhas) {
       // Normaliza: remove acentos e espaços
       const base = nomeAluno.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      let emailFinal = `${base}@oficina.com`;
+      let emailFinal = `${base}@sag.com`;
       let sufixo = 2;
 
       while (emailsExistentes.has(emailFinal) || emailsNoLote.has(emailFinal)) {
-        emailFinal = `${base}${sufixo}@oficina.com`;
+        emailFinal = `${base}${sufixo}@sag.com`;
         sufixo++;
       }
       
@@ -283,7 +283,7 @@ export default function AlunosPage() {
           // --- FORMULÁRIO DE LOTE ---
           <div className="space-y-4">
             <div className="p-3 bg-blue-50 text-blue-800 text-xs rounded-lg mb-4">
-              Cole os nomes, um por linha. O e-mail será gerado automaticamente (ex: analaura@oficina.com).
+              Cole os nomes, um por linha. O e-mail será gerado automaticamente (ex: analaura@sag.com).
             </div>
             
             <div className="space-y-1">

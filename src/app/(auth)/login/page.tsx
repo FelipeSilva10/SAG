@@ -57,9 +57,9 @@ export default function LoginPage() {
           </div>
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">sag</h1>
+          <h1 className="text-2xl font-bold text-white">SAG</h1>
           <p className="mt-2 text-sm text-gray-400 leading-relaxed">
-            Painel de gestão escolar<br />para o sag Code
+            Painel de gestão escolar<br />para o Bloquin IDE
           </p>
         </div>
         <div className="w-16 h-px bg-gray-600" />
@@ -73,7 +73,7 @@ export default function LoginPage() {
           <div className="md:hidden flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-blue-300"
               style={{ background: "#2c5282" }}>OA</div>
-            <span className="font-bold text-gray-800">sag</span>
+            <span className="font-bold text-gray-800">SAG</span>
           </div>
 
           <h2 className="text-2xl font-bold text-gray-900">Bem-vindo de volta</h2>
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-6 text-xs text-center text-gray-400">
-            sag do Amanhã — Plataforma SaaS Educacional
+            Plataforma SAG
           </p>
         </div>
       </div>

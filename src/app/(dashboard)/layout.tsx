@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               OA
             </div>
             <div>
-              <p className="text-sm font-bold text-white leading-none">sag</p>
+              <p className="text-sm font-bold text-white leading-none">SAG</p>
               <p className="text-xs text-gray-500 mt-0.5 leading-none truncate max-w-[100px]">
                 {sessao?.nome ?? "—"}
               </p>
@@ -126,7 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Header */}
         <header className="flex-none h-14 flex items-center px-6 bg-white border-b border-gray-200">
           <div className="flex items-center gap-1.5 text-sm text-gray-500">
-            <span className="font-medium text-gray-900">sag</span>
+            <span className="font-medium text-gray-900">SAG</span>
             {currentItem && (
               <>
                 <ChevronRight size={14} className="text-gray-300" />

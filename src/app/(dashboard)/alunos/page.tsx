@@ -194,7 +194,7 @@ export default function AlunosPage() {
     <div className="flex h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Cabeçalho */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
+        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Alunos</h1>
             {!isAdmin() && <p className="text-xs text-gray-400 mt-0.5">Exibindo apenas alunos das suas turmas</p>}
@@ -208,7 +208,7 @@ export default function AlunosPage() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar aluno, escola..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-lg sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-8 pr-4 py-2 text-sm border border-slate-300 rounded-md sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 bg-white"
             />
           </div>
 
@@ -236,7 +236,7 @@ export default function AlunosPage() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-[#f5f7f9]">
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">E-mail</th>
                   {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Situação</th>}
@@ -250,7 +250,7 @@ export default function AlunosPage() {
                   <tr
                     key={aluno.id}
                     onClick={() => abrirDetalhe(aluno)}
-                    className={`border-b border-gray-100 cursor-pointer transition hover:bg-blue-50 ${editTarget?.id === aluno.id ? "bg-blue-50" : ""}`}
+                    className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${editTarget?.id === aluno.id ? "bg-[#eef4f8]" : ""}`}
                   >
                     <td className="px-6 py-3 font-medium text-gray-900">{aluno.nome}</td>
                     <td className="px-4 py-3 text-gray-600">{aluno.email}</td>
@@ -298,7 +298,7 @@ export default function AlunosPage() {
               <textarea 
                 value={nomesLote}
                 onChange={(e) => setNomesLote(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-lg text-sm h-32 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full p-3 border border-slate-300 rounded-md text-sm h-32 focus:ring-2 focus:ring-[#285a82]/20 focus:outline-none"
                 placeholder="Ex:&#10;Ana Laura&#10;João Silva"
               />
             </div>

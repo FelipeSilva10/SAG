@@ -255,7 +255,7 @@ export default function CronogramaPage() {
     <div className="flex h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
+        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Cronograma</h1>
             {!admin && (
@@ -310,7 +310,7 @@ export default function CronogramaPage() {
                       <div className="text-center py-2 text-xs font-bold text-white rounded-t-lg bg-gray-800">
                         {DIAS_LABELS[dia]}
                       </div>
-                      <div className="border border-gray-200 rounded-b-lg min-h-[80px] p-1.5 space-y-1 bg-gray-50">
+                      <div className="border border-slate-200 rounded-b-md min-h-[80px] p-1.5 space-y-1 bg-[#f5f7f9]">
                         {(gradeSemanal[dia] ?? []).length === 0 ? (
                           <p className="text-center text-gray-300 text-xs pt-3">—</p>
                         ) : (
@@ -350,7 +350,7 @@ export default function CronogramaPage() {
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50">
+                    <tr className="border-b border-slate-200 bg-[#f5f7f9]">
                       {admin && (
                         <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
                           Professor
@@ -378,7 +378,7 @@ export default function CronogramaPage() {
                     {grupos.map((g, i) => (
                       <tr
                         key={i}
-                        className={`border-b border-gray-100 hover:bg-blue-50 transition cursor-pointer ${
+                        className={`border-b border-slate-100 hover:bg-[#f4f8fb] transition cursor-pointer ${
                           g.tipo !== "AULA" ? "bg-purple-50/30" : ""
                         }`}
                         onClick={() => abrirEditar(g)}

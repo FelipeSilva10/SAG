@@ -57,7 +57,7 @@ export function Select({
 
             error
               ? "border-red-400 focus:border-red-400 focus:ring-red-400/30"
-              : "border-slate-200 hover:border-slate-300 focus:border-indigo-400 focus:ring-indigo-500/30 dark:border-slate-700 dark:hover:border-slate-600",
+              : "border-slate-200 hover:border-slate-300 focus:border-[#285a82] focus:ring-[#285a82]/20 dark:border-slate-700 dark:hover:border-slate-600",
 
             disabled &&
               "cursor-not-allowed bg-slate-50 text-slate-400 dark:bg-slate-800",

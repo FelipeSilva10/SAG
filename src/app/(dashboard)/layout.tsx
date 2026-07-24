@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div className="sag-shell flex h-screen overflow-hidden bg-[#f5f6fa] text-slate-900">
+    <div className="sag-shell flex h-screen overflow-hidden bg-[#eef1f4] text-slate-900">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-slate-950/40 md:hidden"
@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      <aside className="hidden w-64 flex-none flex-col overflow-y-auto border-r border-slate-800 bg-[#111827] md:flex">
+      <aside className="hidden w-60 flex-none flex-col overflow-y-auto border-r border-[#365570] bg-[#233f5c] md:flex">
         <SidebarContent
           sessao={sessao}
           admin={admin}
@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-slate-800 bg-[#111827]",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-[#365570] bg-[#233f5c]",
           "transition-transform duration-200 ease-out md:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-[4.5rem] flex-none items-center gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur md:px-8">
+        <header className="flex h-16 flex-none items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-8">
           <button
             className="flex-none rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 md:hidden"
             onClick={() => setSidebarOpen(true)}
@@ -127,11 +127,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
 
           <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-            <span className="hidden font-medium text-slate-400 sm:inline">Painel</span>
+            <span className="hidden font-medium text-slate-500 sm:inline">Sistema SAG</span>
             {currentItem && (
               <>
                 <ChevronRight size={15} className="hidden flex-none text-slate-300 sm:inline" />
-                <span className="truncate font-semibold text-slate-800">
+                <span className="truncate font-medium text-slate-700">
                   {currentItem.label}
                 </span>
               </>
@@ -139,9 +139,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="hidden items-center gap-3 sm:flex">
-            <div className="hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 lg:flex">
+            <div className="hidden items-center gap-2 text-xs text-slate-500 lg:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Sistema online
+              Ambiente ativo
             </div>
             <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">
               <Avatar nome={sessao?.nome ?? "Sessão"} />
@@ -153,7 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="sag-main flex-1 overflow-auto bg-[#f5f6fa]">
+        <main className="sag-main flex-1 overflow-auto bg-[#eef1f4]">
           {children}
         </main>
       </div>
@@ -178,18 +178,18 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between border-b border-slate-800 px-5 py-5">
+      <div className="flex items-center justify-between border-b border-[#365570] px-5 py-5">
         <button
           type="button"
           onClick={() => onNavigate("/dashboard")}
           className="flex min-w-0 items-center gap-3 text-left"
         >
-          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-black text-white shadow-lg shadow-indigo-950/30">
+          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-xs font-black text-[#233f5c]">
             <span className="tracking-tight">SAG</span>
           </div>
           <div className="min-w-0">
             <p className="truncate text-[15px] font-bold leading-tight text-white">SAG</p>
-            <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-500">Gestão escolar</p>
+            <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-300">Sistema institucional</p>
           </div>
         </button>
 
@@ -225,8 +225,8 @@ function SidebarContent({
         />
       </nav>
 
-      <div className="space-y-3 border-t border-slate-800 px-3 py-4">
-        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
+      <div className="space-y-3 border-t border-[#365570] px-3 py-4">
+        <div className="flex items-center gap-3 rounded-md border border-[#365570] bg-[#1d354d] px-3 py-3">
           <Avatar nome={sessao?.nome ?? "Sessão"} />
           <div className="min-w-0">
             <p className="truncate text-xs font-bold text-slate-100">{sessao?.nome ?? "Carregando sessão"}</p>
@@ -236,7 +236,7 @@ function SidebarContent({
 
         <button
           onClick={onLogout}
-          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-950/40 hover:text-red-200"
+          className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-[#1d354d] hover:text-white"
         >
           <LogOut size={15} />
           Sair
@@ -261,7 +261,7 @@ function NavGroup({
 
   return (
     <div>
-      <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
+      <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300/60">
         {label}
       </p>
 
@@ -296,17 +296,17 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
+        "group flex w-full items-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2.5 text-left text-sm transition-colors",
         active
-          ? "bg-indigo-500/15 text-indigo-200 shadow-sm ring-1 ring-inset ring-indigo-400/20"
-          : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
+          ? "border-l-sky-200 bg-white/10 text-white"
+          : "text-slate-300 hover:bg-[#1d354d] hover:text-white"
       )}
     >
-      <span className={cn("flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors", active ? "bg-indigo-500 text-white" : "text-slate-500 group-hover:text-slate-200")}>
+      <span className={cn("flex h-6 w-6 flex-none items-center justify-center transition-colors", active ? "text-sky-100" : "text-slate-400 group-hover:text-white")}>
         {item.icon}
       </span>
       <span className="truncate font-medium">{item.label}</span>
-      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300" />}
+      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sky-200" />}
     </button>
   );
 }
@@ -321,7 +321,7 @@ function Avatar({ nome }: { nome: string }) {
     .toUpperCase() || "S";
 
   return (
-    <div aria-hidden="true" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700">
+    <div aria-hidden="true" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#dce8f2] text-[11px] font-bold text-[#285a82]">
       {initials}
     </div>
   );

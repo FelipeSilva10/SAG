@@ -121,7 +121,7 @@ export default function EscolasPage() {
     <div className="flex h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Cabeçalho */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
+        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Escolas</h1>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -142,7 +142,7 @@ export default function EscolasPage() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar escola..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-lg sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-8 pr-4 py-2 text-sm border border-slate-300 rounded-md sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 bg-white"
             />
           </div>
 
@@ -170,7 +170,7 @@ export default function EscolasPage() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-[#f5f7f9]">
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
                     Nome
                   </th>
@@ -189,7 +189,7 @@ export default function EscolasPage() {
                     key={escola.id}
                     onClick={() => (admin ? abrirEditar(escola) : undefined)}
                     className={`border-b border-gray-100 transition ${
-                      admin ? "cursor-pointer hover:bg-blue-50" : ""
+                      admin ? "cursor-pointer hover:bg-[#f4f8fb]" : ""
                     } ${editTarget?.id === escola.id ? "bg-blue-50" : ""}`}
                   >
                     <td className="px-6 py-3 font-medium text-gray-900">

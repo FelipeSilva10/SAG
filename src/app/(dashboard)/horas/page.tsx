@@ -40,7 +40,7 @@ function Card({
   titulo, valor, cor, icone,
 }: { titulo: string; valor: string; cor: string; icone: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4">
+    <div className="bg-white border border-slate-200 rounded-lg p-4 flex items-center gap-4">
       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${cor}`}>
         {icone}
       </div>
@@ -158,7 +158,7 @@ export default function HorasPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
+      <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
         <h1 className="text-lg font-bold text-gray-900">
           {admin ? "Registro de Horas — Administração" : "Meu Registro de Horas"}
         </h1>
@@ -207,7 +207,7 @@ export default function HorasPage() {
         <button
           onClick={exportarCSV}
           disabled={listaExibida.length === 0}
-          className="flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-40 transition sm:w-auto"
+          className="flex w-full items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold border border-slate-300 rounded-md hover:bg-[#f4f8fb] disabled:opacity-40 transition sm:w-auto"
         >
           <Download size={14} />
           Exportar CSV
@@ -215,7 +215,7 @@ export default function HorasPage() {
       </div>
 
       {/* Cards de totais */}
-      <div className="grid grid-cols-1 gap-3 px-4 py-4 bg-gray-50 border-b border-gray-200 sm:grid-cols-3 sm:px-6">
+      <div className="grid grid-cols-1 gap-3 px-4 py-4 bg-[#f5f7f9] border-b border-slate-200 sm:grid-cols-3 sm:px-6">
         <Card
           titulo="Total de Aulas"
           valor={String(listaExibida.length)}
@@ -266,7 +266,7 @@ export default function HorasPage() {
                       <tr
                         key={r.professorId}
                         onClick={() => setProfSel(profSel?.professorId === r.professorId ? null : r)}
-                        className={`border-b border-gray-100 cursor-pointer transition hover:bg-blue-50 ${
+                        className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${
                           profSel?.professorId === r.professorId ? "bg-blue-50 font-semibold" : ""
                         }`}
                       >

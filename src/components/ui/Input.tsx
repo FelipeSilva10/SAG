@@ -56,7 +56,7 @@ export default function Input({
           className={cn(
             "h-10 w-full rounded-lg border bg-white py-2.5 text-sm text-slate-900",
             "placeholder-slate-400 transition-colors duration-150",
-            "focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-400",
+            "focus:outline-none focus:ring-2 focus:ring-[#285a82]/15 focus:border-[#285a82]",
             "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed",
             error
               ? "border-red-400 focus:ring-red-400 focus:border-red-400"

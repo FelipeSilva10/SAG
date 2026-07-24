@@ -244,7 +244,7 @@ export default function ChamadaPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Sub-header com tabs */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white border-b border-gray-200 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white border-b border-slate-200 sm:px-6">
         <h1 className="mr-2 text-lg font-bold text-gray-900 sm:mr-4">Chamada</h1>
 
         {(["PREVIEW", "HISTORICO"] as Tela[]).map((t) => (
@@ -419,7 +419,7 @@ function FormTela({
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Sub-header */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-gray-50 border-b border-gray-200">
+      <div className="flex items-center gap-3 px-6 py-3 bg-[#f5f7f9] border-b border-slate-200">
         <button
           onClick={onVoltar}
           className="text-blue-600 text-sm font-medium hover:underline flex items-center gap-1"
@@ -431,7 +431,7 @@ function FormTela({
       </div>
 
       {/* Seletor */}
-      <div className="flex flex-col gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200 sm:flex-row sm:items-end sm:flex-wrap sm:px-6">
+      <div className="flex flex-col gap-3 px-4 py-3 bg-[#f5f7f9] border-b border-slate-200 sm:flex-row sm:items-end sm:flex-wrap sm:px-6">
         <div className="w-full sm:w-56">
           <Select
             label="Turma"
@@ -451,7 +451,7 @@ function FormTela({
             type="date"
             value={data}
             onChange={(e) => setData(e.target.value)}
-            className="h-10 w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-auto"
+            className="h-10 w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 sm:w-auto"
           />
         </div>
         <Button onClick={onCarregar} variant="secondary" disabled={!turmaId || !data} className="w-full sm:w-auto">
@@ -477,7 +477,7 @@ function FormTela({
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
+              <tr className="border-b border-slate-200 bg-[#f5f7f9]">
                 <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
                   Aluno
                 </th>
@@ -565,7 +565,7 @@ function HistoricoTela({
                   <tr
                     key={c.id}
                     onClick={() => onAbrirDetalhe(c)}
-                    className={`border-b border-gray-100 cursor-pointer transition hover:bg-blue-50 ${
+                    className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${
                       detalhe?.id === c.id ? "bg-blue-50" : ""
                     }`}
                   >

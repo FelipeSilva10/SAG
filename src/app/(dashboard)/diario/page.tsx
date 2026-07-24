@@ -149,7 +149,7 @@ export default function DiarioPage() {
     <div className="flex h-full">
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
+        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
           <div>
             <h1 className="text-lg font-bold text-gray-900">Diário de Aulas</h1>
             <p className="text-xs text-gray-400 mt-0.5">
@@ -174,7 +174,7 @@ export default function DiarioPage() {
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               placeholder="Buscar título, conteúdo..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-lg sm:w-56 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full pl-8 pr-4 py-2 text-sm border border-slate-300 rounded-md sm:w-56 focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 bg-white"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function DiarioPage() {
           ) : (
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-[#f5f7f9]">
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide w-28">Data</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide w-40">Turma</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Título</th>
@@ -220,7 +220,7 @@ export default function DiarioPage() {
                     <tr
                       key={entrada.id}
                       onClick={() => abrirEditar(entrada)}
-                      className={`border-b border-gray-100 cursor-pointer transition hover:bg-blue-50 ${
+                      className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${
                         temObs ? "bg-amber-50/40" : ""
                       } ${editando?.id === entrada.id ? "bg-blue-50" : ""}`}
                     >

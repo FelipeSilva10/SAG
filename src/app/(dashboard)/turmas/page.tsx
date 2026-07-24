@@ -127,30 +127,30 @@ export default function TurmasPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Gestão acadêmica</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Turmas</h1>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#285a82]">Administração escolar</p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Turmas</h1>
           <p className="mt-2 max-w-xl text-sm text-slate-500">
             Organize as turmas por escola, ano letivo e professor responsável.
             {!admin && " Aqui estão apenas as turmas vinculadas a você."}
           </p>
         </div>
         {admin && (
-          <Button onClick={abrirNova} size="md" className="self-start sm:self-auto">
+          <Button onClick={abrirNova} size="md" className="self-start rounded-md sm:self-auto">
             <Plus size={16} /> Nova turma
           </Button>
         )}
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-3">
         <SummaryCard label="Total de turmas" value={turmas.length} icon={<Users size={18} />} tone="indigo" />
         <SummaryCard label="Escolas atendidas" value={escolasComTurma} icon={<School size={18} />} tone="sky" />
         <SummaryCard label="Sem professor" value={turmasSemProfessor} icon={<UserRound size={18} />} tone={turmasSemProfessor ? "amber" : "green"} />
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-100 p-4 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -180,7 +180,7 @@ export default function TurmasPage() {
                   onChange={(e) => setBusca(e.target.value)}
                   placeholder="Buscar turma, escola ou professor"
                   aria-label="Buscar turmas"
-                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                  className="h-10 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-[#285a82] focus:ring-2 focus:ring-[#285a82]/15"
                 />
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function TurmasPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
+                <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Turma</th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Escola</th>
                   <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Professor responsável</th>
@@ -213,11 +213,11 @@ export default function TurmasPage() {
                   <tr
                     key={turma.id}
                     onClick={() => abrirDetalhe(turma)}
-                    className={`group cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-indigo-50/40 ${editTarget?.id === turma.id ? "bg-indigo-50/60" : ""}`}
+                    className={`group cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-[#f4f8fb] ${editTarget?.id === turma.id ? "bg-[#eef4f8]" : ""}`}
                   >
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><Users size={16} /></div>
+                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-[#285a82]"><Users size={16} /></div>
                         <div>
                           <p className="font-bold text-slate-800">{turma.nome}</p>
                           <div className="mt-1 flex items-center gap-1 text-xs text-slate-400"><CalendarDays size={12} /> Ano letivo {turma.anoLetivo}</div>
@@ -234,7 +234,7 @@ export default function TurmasPage() {
                     {admin && (
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                          <button type="button" onClick={() => abrirDetalhe(turma)} aria-label={`Editar ${turma.nome}`} title="Editar turma" className="rounded-lg p-2 text-slate-400 transition hover:bg-indigo-100 hover:text-indigo-600"><Pencil size={15} /></button>
+                          <button type="button" onClick={() => abrirDetalhe(turma)} aria-label={`Editar ${turma.nome}`} title="Editar turma" className="rounded-md p-2 text-slate-400 transition hover:bg-[#e7eef5] hover:text-[#285a82]"><Pencil size={15} /></button>
                           <button type="button" onClick={() => handleExcluir(turma)} disabled={deleting === turma.id} aria-label={`Excluir ${turma.nome}`} title="Excluir turma" className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"><Trash2 size={15} /></button>
                         </div>
                       </td>
@@ -254,11 +254,11 @@ export default function TurmasPage() {
         onClose={fecharPanel}
         width="w-80 sm:w-[26rem]"
       >
-        <div className="rounded-xl bg-indigo-50 px-4 py-3 text-xs leading-relaxed text-indigo-800">
+        <div className="rounded-md border border-[#c9d9e5] bg-[#f2f6f9] px-4 py-3 text-xs leading-relaxed text-[#285a82]">
           {admin ? "Uma turma precisa estar vinculada a uma escola. O professor pode ser atribuído agora ou depois." : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
         </div>
         <div className="border-t border-slate-100 pt-4">
-          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Informações básicas</p>
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Informações básicas</p>
           <div className="space-y-4">
             <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
             <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
@@ -267,7 +267,7 @@ export default function TurmasPage() {
           </div>
         </div>
         {admin && (
-          <div className="space-y-3 border-t border-slate-100 pt-5">
+          <div className="space-y-3 border-t border-slate-200 pt-5">
             <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">{formMode === "new" ? "Criar turma" : "Salvar alterações"}</Button>
             {formMode === "edit" && editTarget && <Button variant="ghost" onClick={() => handleExcluir(editTarget)} loading={deleting === editTarget.id} className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"><Trash2 size={14} /> Excluir turma</Button>}
           </div>
@@ -289,17 +289,17 @@ function SummaryCard({
   tone: "indigo" | "sky" | "amber" | "green";
 }) {
   const tones = {
-    indigo: "bg-indigo-50 text-indigo-600",
-    sky: "bg-sky-50 text-sky-600",
-    amber: "bg-amber-50 text-amber-600",
-    green: "bg-emerald-50 text-emerald-600",
+    indigo: "bg-[#e7eef5] text-[#285a82]",
+    sky: "bg-[#edf3f7] text-[#416d8d]",
+    amber: "bg-[#f5f1e8] text-[#866a35]",
+    green: "bg-[#edf4ef] text-[#487254]",
   };
 
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${tones[tone]}`}>{icon}</div>
+    <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
         <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
       </div>
     </div>

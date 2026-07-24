@@ -96,7 +96,7 @@ export default function DashboardPage() {
       href: "/escolas",
       icon: <School size={18} />,
       metric: `${escolas.length} cadastrada${escolas.length === 1 ? "" : "s"}`,
-      accent: "text-blue-700 bg-blue-50 border-blue-100",
+      accent: "text-[#285a82] bg-[#eef4f8] border-[#c9d9e5]",
     },
     {
       title: "Turmas",
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       href: "/turmas",
       icon: <Users size={18} />,
       metric: `${turmas.length} ativa${turmas.length === 1 ? "" : "s"}`,
-      accent: "text-emerald-700 bg-emerald-50 border-emerald-100",
+      accent: "text-[#416d8d] bg-[#edf3f7] border-[#d1e0ea]",
     },
     {
       title: "Alunos",
@@ -112,7 +112,7 @@ export default function DashboardPage() {
       href: "/alunos",
       icon: <GraduationCap size={18} />,
       metric: `${alunos.length} aluno${alunos.length === 1 ? "" : "s"}`,
-      accent: "text-amber-700 bg-amber-50 border-amber-100",
+      accent: "text-[#866a35] bg-[#f5f1e8] border-[#e5dcc8]",
     },
     ...(admin
       ? [{
@@ -121,7 +121,7 @@ export default function DashboardPage() {
           href: "/professores",
           icon: <BookUser size={18} />,
           metric: `${professores.length} docente${professores.length === 1 ? "" : "s"}`,
-          accent: "text-violet-700 bg-violet-50 border-violet-100",
+          accent: "text-[#536b7d] bg-[#eef1f3] border-[#d6dfe5]",
         }]
       : []),
     {
@@ -130,7 +130,7 @@ export default function DashboardPage() {
       href: "/cronograma",
       icon: <CalendarDays size={18} />,
       metric: admin ? "Planejamento geral" : "Minha semana",
-      accent: "text-sky-700 bg-sky-50 border-sky-100",
+      accent: "text-[#416d8d] bg-[#edf3f7] border-[#d1e0ea]",
     },
     ...(!admin
       ? [
@@ -140,7 +140,7 @@ export default function DashboardPage() {
             href: "/chamada",
             icon: <ClipboardCheck size={18} />,
             metric: "Rotina diária",
-            accent: "text-green-700 bg-green-50 border-green-100",
+            accent: "text-[#487254] bg-[#edf4ef] border-[#d4e5d7]",
           },
           {
             title: "Diário de Aulas",
@@ -148,7 +148,7 @@ export default function DashboardPage() {
             href: "/diario",
             icon: <BookOpen size={18} />,
             metric: "Registros pedagógicos",
-            accent: "text-rose-700 bg-rose-50 border-rose-100",
+            accent: "text-[#775b60] bg-[#f4eeee] border-[#e6d8da]",
           },
         ]
       : []),
@@ -253,35 +253,34 @@ export default function DashboardPage() {
   }).format(new Date());
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-7 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
-      <section className="relative overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#312e81] via-indigo-600 to-violet-600 p-6 text-white shadow-xl shadow-indigo-900/10 sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border-[30px] border-white/10" />
-        <div className="pointer-events-none absolute -bottom-32 right-24 h-56 w-56 rounded-full bg-violet-400/20 blur-3xl" />
-        <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <section className="border-b border-slate-300 pb-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="mb-4 flex items-center gap-2 text-xs font-medium text-indigo-100">
+            <div className="mb-3 flex items-center gap-2 text-xs font-medium text-slate-500">
               <CalendarDays size={14} />
               <span className="capitalize">{dateLabel}</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              {admin ? "Visão geral da gestão" : `Olá, ${sessao?.nome?.split(" ")[0] ?? "professor"}`}
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#285a82]">Dashboard</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {admin ? "Visão geral" : `Olá, ${sessao?.nome?.split(" ")[0] ?? "professor"}`}
             </h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-indigo-100 sm:text-base">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
               {admin
-                ? "Acompanhe a operação e resolva as pendências da sua rede em poucos passos."
-                : "Tudo pronto para você organizar sua rotina de aulas e acompanhar suas turmas."}
+                ? "Acompanhe os cadastros e as pendências da operação escolar."
+                : "Consulte suas turmas e registre as atividades da rotina escolar."}
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 lg:justify-end">
             {quickActions.map((action) => (
               <Button
                 key={action.title}
-                variant={action.primary ? "secondary" : "ghost"}
+                variant={action.primary ? "primary" : "secondary"}
                 size="sm"
                 title={action.description}
                 onClick={() => router.push(action.href)}
-                className={action.primary ? "border-0 bg-white text-indigo-700 hover:bg-indigo-50" : "text-white hover:bg-white/10 hover:text-white"}
+                className="rounded-md"
               >
                 {action.icon}
                 {action.title}
@@ -292,12 +291,12 @@ export default function DashboardPage() {
       </section>
 
       {loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white py-14 shadow-sm">
+        <div className="rounded-lg border border-slate-200 bg-white py-14">
           <Spinner text="Carregando seu painel..." />
         </div>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Escolas"
               value={escolas.length}
@@ -324,12 +323,12 @@ export default function DashboardPage() {
             />
           </section>
 
-          <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="space-y-4">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold tracking-tight text-slate-900">Acessos rápidos</h2>
-                  <p className="mt-1 text-sm text-slate-500">Entre direto no que você precisa resolver agora.</p>
+                  <h2 className="text-base font-bold text-slate-900">Módulos do sistema</h2>
+                  <p className="mt-1 text-sm text-slate-500">Acesso aos recursos disponíveis para seu perfil.</p>
                 </div>
               </div>
 
@@ -345,19 +344,19 @@ export default function DashboardPage() {
             </section>
 
             <aside className="space-y-4">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">Pontos de atenção</h2>
-                    <p className="mt-1 text-xs text-slate-500">O que merece uma olhada hoje.</p>
+                    <h2 className="text-base font-bold text-slate-900">Pendências</h2>
+                    <p className="mt-1 text-xs text-slate-500">Itens que precisam de acompanhamento.</p>
                   </div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50 text-amber-600">!</div>
+                  <span className="text-xs font-medium text-slate-400">Resumo</span>
                 </div>
                 <div className="mt-3 space-y-3">
                   {operationalNotes.map((note) => (
                     <div
                       key={note.label}
-                      className="rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-3"
+                      className="border-l-2 border-slate-300 bg-slate-50 px-3.5 py-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-xs font-semibold text-slate-600">{note.label}</p>
@@ -371,16 +370,16 @@ export default function DashboardPage() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-base font-bold text-slate-900">Fluxo recomendado</h2>
-                <p className="mt-1 text-xs text-slate-500">Uma sequência simples para manter tudo em dia.</p>
+              <section className="rounded-lg border border-slate-200 bg-white p-4">
+                <h2 className="text-base font-bold text-slate-900">Rotina do sistema</h2>
+                <p className="mt-1 text-xs text-slate-500">Ordem sugerida para os procedimentos.</p>
                 <div className="mt-3 space-y-2 text-sm">
                   {(admin
                     ? ["Escolas", "Turmas", "Alunos", "Cronograma", "Horas"]
                     : ["Cronograma", "Chamada", "Diário de Aulas", "Horas"]
                   ).map((step, index) => (
-                    <div key={step} className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50">
-                      <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-600">
+                    <div key={step} className="flex items-center gap-3 border-b border-slate-100 px-2 py-2 last:border-0">
+                      <span className="flex h-6 w-6 flex-none items-center justify-center rounded-sm bg-slate-100 text-xs font-bold text-slate-600">
                         {index + 1}
                       </span>
                       <span className="font-medium text-slate-700">{step}</span>
@@ -408,14 +407,14 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+    <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-          <p className="mt-3 text-3xl font-bold tracking-tight text-slate-950">{value}</p>
-          <p className="mt-1.5 text-xs text-slate-500">{detail}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
+          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</p>
+          <p className="mt-1 text-xs text-slate-500">{detail}</p>
         </div>
-        <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 transition-colors group-hover:bg-indigo-600 group-hover:text-white">
+        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-[#285a82]">
           {icon}
         </div>
       </div>
@@ -434,16 +433,16 @@ function ModuleCard({
     <button
       type="button"
       onClick={onClick}
-      className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+      className="group rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-[#9eb7cb] hover:bg-[#f8fafc]"
     >
       <div className="flex items-start gap-3">
-        <div className={`flex h-11 w-11 flex-none items-center justify-center rounded-xl border ${item.accent}`}>
+        <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${item.accent}`}>
           {item.icon}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
             <p className="font-bold text-slate-900">{item.title}</p>
-            <ArrowRight size={16} className="flex-none text-slate-300 transition-colors group-hover:translate-x-0.5 group-hover:text-indigo-600" />
+            <ArrowRight size={15} className="flex-none text-slate-300 transition-colors group-hover:text-[#285a82]" />
           </div>
           <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.description}</p>
           {item.metric && (

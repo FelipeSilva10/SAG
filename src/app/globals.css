@@ -18,21 +18,21 @@
   --border-subtle: #e2e8f0;
   --border-default: #cbd5e1;
 
-  --accent: #4f46e5;
-  --accent-hover: #4338ca;
+  --accent: #285a82;
+  --accent-hover: #204967;
 
   --success: #16a34a;
   --danger: #dc2626;
   --warn: #d97706;
 
   --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
 
   --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
-  --shadow-md: 0 4px 6px rgba(0,0,0,0.08);
+  --shadow-sm: 0 1px 2px rgba(15, 35, 55, 0.06);
+  --shadow-md: 0 2px 5px rgba(15, 35, 55, 0.08);
   --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
   --shadow-xl: 0 20px 25px rgba(0,0,0,0.1);
 }
@@ -74,7 +74,7 @@
 
   body {
     font-family: var(--font-sans);
-    background: #f5f6fa;
+    background: #eef1f4;
     color: var(--text-primary);
 
     line-height: 1.5;
@@ -89,7 +89,7 @@
   }
 
   ::selection {
-    background: rgba(79, 70, 229, 0.18);
+    background: rgba(40, 90, 130, 0.18);
     color: inherit;
   }
 

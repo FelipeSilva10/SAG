@@ -7,7 +7,8 @@ import type { Aluno } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase";
 
 const BASE_SELECT = sql`
-  SELECT p.id, p.nome, p.email, p.senha, p.turma_id,
+  SELECT p.id, p.nome, p.email, p.turma_id,
+         p.access_status, p.entity_status, p.must_change_senha,
          COALESCE(t.nome, 'Sem Turma') AS turma_nome,
          COALESCE(e.nome, 'Sem Escola') AS escola_nome
   FROM perfis p
@@ -21,10 +22,12 @@ function mapAluno(r: Record<string, unknown>): Aluno {
     id: r.id as string,
     nome: r.nome as string,
     email: r.email as string,
-    senha: r.senha as string,
     turmaId: r.turma_id as string,
     turmaNome: r.turma_nome as string,
     escolaNome: r.escola_nome as string,
+    accessStatus: (r.access_status as string) ?? "ATIVO",
+    entityStatus: (r.entity_status as string) ?? "ATIVO",
+    mustChangeSenha: Boolean(r.must_change_senha),
   };
 }
 
@@ -38,7 +41,8 @@ export async function GET(request: NextRequest) {
 
     if (turmaId) {
       rows = await sql`
-        SELECT p.id, p.nome, p.email, p.senha, p.turma_id,
+        SELECT p.id, p.nome, p.email, p.turma_id,
+               p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
                COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
@@ -49,7 +53,8 @@ export async function GET(request: NextRequest) {
       `;
     } else if (professorId) {
       rows = await sql`
-        SELECT p.id, p.nome, p.email, p.senha, p.turma_id,
+        SELECT p.id, p.nome, p.email, p.turma_id,
+               p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
                COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
@@ -60,7 +65,8 @@ export async function GET(request: NextRequest) {
       `;
     } else {
       rows = await sql`
-        SELECT p.id, p.nome, p.email, p.senha, p.turma_id,
+        SELECT p.id, p.nome, p.email, p.turma_id,
+               p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
                COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
@@ -115,6 +121,12 @@ export async function POST(request: NextRequest) {
         ON CONFLICT (id) DO UPDATE
           SET nome = EXCLUDED.nome, email = EXCLUDED.email,
               senha = EXCLUDED.senha, turma_id = EXCLUDED.turma_id
+      `;
+
+      await sql`
+        INSERT INTO membros_turma (turma_id, utilizador_id)
+        VALUES (${turmaId}::uuid, ${authId}::uuid)
+        ON CONFLICT (turma_id, utilizador_id) DO NOTHING
       `;
     } catch (dbError) {
       // Rollback: remove do Auth se o insert no banco falhou

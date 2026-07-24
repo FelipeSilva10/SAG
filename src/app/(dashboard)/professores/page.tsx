@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Search, Plus, Trash2, Pencil, Users } from "lucide-react";
 import { useProfessores } from "@/hooks/useProfessores";
 import { useSessionStore } from "@/store/session";
-import { Button, Input, SidePanel, Spinner } from "@/components/ui";
+import { Badge, Button, Input, SidePanel, Spinner } from "@/components/ui";
 import type { Professor, Turma } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -52,7 +52,8 @@ export default function ProfessoresPage() {
     setEditTarget(prof);
     setNome(prof.nome);
     setEmail(prof.email);
-    setSenha(prof.senha);
+    // A API não devolve senhas. Em edição, campo vazio significa manter a atual.
+    setSenha("");
     setPanelOpen(true);
     buscarTurmasDoProfessor(prof.id);
   }
@@ -70,11 +71,11 @@ export default function ProfessoresPage() {
   }
 
   async function handleSalvar() {
-    if (!nome.trim() || !email.trim() || !senha) {
-      toast.error("Preencha todos os campos.");
+    if (!nome.trim() || !email.trim() || (formMode === "new" && !senha)) {
+      toast.error(formMode === "new" ? "Preencha nome, e-mail e senha inicial." : "Preencha nome e e-mail.");
       return;
     }
-    if (senha.length < 6) return toast.error("Senha mínima de 6 caracteres.");
+    if (senha && senha.length < 6) return toast.error("Senha mínima de 6 caracteres.");
 
     setSaving(true);
     try {
@@ -145,7 +146,7 @@ export default function ProfessoresPage() {
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">E-mail</th>
-                  {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Senha</th>}
+                  {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Situação</th>}
                   {isAdmin() && <th className="px-4 py-3 w-24" />}
                 </tr>
               </thead>
@@ -160,7 +161,13 @@ export default function ProfessoresPage() {
                   >
                     <td className="px-6 py-3 font-medium text-gray-900">{prof.nome}</td>
                     <td className="px-4 py-3 text-gray-600">{prof.email}</td>
-                    {isAdmin() && <td className="px-4 py-3 text-gray-500 font-mono text-xs">{prof.senha}</td>}
+                    {isAdmin() && (
+                      <td className="px-4 py-3">
+                        <Badge variant={prof.accessStatus === "ATIVO" ? "green" : "red"} dot>
+                          {prof.mustChangeSenha ? "Troca pendente" : prof.accessStatus === "ATIVO" ? "Acesso ativo" : "Acesso suspenso"}
+                        </Badge>
+                      </td>
+                    )}
                     {isAdmin() && (
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -192,7 +199,7 @@ export default function ProfessoresPage() {
           <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!isAdmin() || formMode === "edit"} />
           
           {isAdmin() && (
-            <Input label="Senha" type="text" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Min. 6 caracteres" />
+          <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} hint={formMode === "edit" ? "A senha atual nunca é exibida." : undefined} />
           )}
 
           {isAdmin() && (

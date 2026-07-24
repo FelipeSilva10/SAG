@@ -72,16 +72,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Escola, nome e ano letivo são obrigatórios." }, { status: 400 });
     }
 
-    await sql`
-      INSERT INTO turmas (escola_id, nome, ano_letivo)
-      VALUES (${escolaId}::uuid, ${nome.trim()}, ${anoLetivo})
+    const [turma] = await sql`
+      INSERT INTO turmas (escola_id, nome, ano_letivo, professor_id)
+      VALUES (${escolaId}::uuid, ${nome.trim()}, ${anoLetivo}, ${professorId || null}::uuid)
+      RETURNING id
     `;
 
-    // Vincula professor se informado
+    if (!turma) {
+      return NextResponse.json({ error: "Não foi possível criar a turma." }, { status: 500 });
+    }
+
     if (professorId) {
       await sql`
-        UPDATE turmas SET professor_id = ${professorId}::uuid
-        WHERE escola_id = ${escolaId}::uuid AND nome = ${nome.trim()} AND ano_letivo = ${anoLetivo}
+        INSERT INTO escola_professores (professor_id, escola_id)
+        VALUES (${professorId}::uuid, ${escolaId}::uuid)
+        ON CONFLICT (professor_id, escola_id) DO NOTHING
       `;
     }
 

@@ -10,14 +10,16 @@ function mapProf(r: Record<string, unknown>): Professor {
     id: r.id as string,
     nome: r.nome as string,
     email: r.email as string,
-    senha: r.senha as string,
+    accessStatus: (r.access_status as string) ?? "ATIVO",
+    entityStatus: (r.entity_status as string) ?? "ATIVO",
+    mustChangeSenha: Boolean(r.must_change_senha),
   };
 }
 
 export async function GET() {
   try {
     const rows = await sql`
-      SELECT id, nome, email, senha
+      SELECT id, nome, email, access_status, entity_status, must_change_senha
       FROM perfis
       WHERE role = 'teacher'
       ORDER BY nome ASC

@@ -5,7 +5,7 @@ import { Search, Plus, Trash2, Pencil, Users, UserPlus } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
-import { Button, Input, Select, SidePanel, Spinner } from "@/components/ui";
+import { Badge, Button, Input, Select, SidePanel, Spinner } from "@/components/ui";
 import type { Aluno, Turma } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -73,7 +73,8 @@ export default function AlunosPage() {
     setEditTarget(aluno);
     setNome(aluno.nome);
     setEmail(aluno.email);
-    setSenha(aluno.senha || "");
+    // A API nunca devolve a senha. Campo vazio na edição mantém a atual.
+    setSenha("");
     
     // Auto-seleciona escola baseada no aluno para carregar turmas
     const escolaMatch = escolas.find(e => e.nome === aluno.escolaNome);
@@ -95,11 +96,11 @@ export default function AlunosPage() {
   }
 
   async function handleSalvarIndividual() {
-    if (!nome || !email || !senha || !turmaIdForm) {
-      toast.error("Preencha todos os campos e selecione a turma.");
+    if (!nome || !email || (formMode === "new" && !senha) || !turmaIdForm) {
+      toast.error(formMode === "new" ? "Preencha os dados, a senha inicial e selecione a turma." : "Preencha os dados e selecione a turma.");
       return;
     }
-    if (senha.length < 6) return toast.error("Senha mínima de 6 caracteres.");
+    if (senha && senha.length < 6) return toast.error("Senha mínima de 6 caracteres.");
 
     setSaving(true);
     try {
@@ -238,7 +239,7 @@ export default function AlunosPage() {
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Nome</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">E-mail</th>
-                  {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Senha</th>}
+                  {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Situação</th>}
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Escola</th>
                   <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Turma</th>
                   {isAdmin() && <th className="px-4 py-3 w-24" />}
@@ -253,7 +254,13 @@ export default function AlunosPage() {
                   >
                     <td className="px-6 py-3 font-medium text-gray-900">{aluno.nome}</td>
                     <td className="px-4 py-3 text-gray-600">{aluno.email}</td>
-                    {isAdmin() && <td className="px-4 py-3 text-gray-500 font-mono text-xs">{aluno.senha}</td>}
+                    {isAdmin() && (
+                      <td className="px-4 py-3">
+                        <Badge variant={aluno.accessStatus === "ATIVO" ? "green" : "red"} dot>
+                          {aluno.mustChangeSenha ? "Troca pendente" : aluno.accessStatus === "ATIVO" ? "Acesso ativo" : "Acesso suspenso"}
+                        </Badge>
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-gray-600">{aluno.escolaNome}</td>
                     <td className="px-4 py-3 text-gray-600">{aluno.turmaNome}</td>
                     {isAdmin() && (
@@ -330,7 +337,7 @@ export default function AlunosPage() {
             <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!isAdmin() || formMode === "edit"} />
             
             {isAdmin() && (
-              <Input label="Senha" type="text" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Min. 6 caracteres" />
+              <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} hint={formMode === "edit" ? "A senha atual nunca é exibida." : undefined} />
             )}
 
             <div className="pt-2 border-t border-gray-100">

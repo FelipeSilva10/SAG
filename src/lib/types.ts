@@ -39,7 +39,9 @@ export interface Professor {
   id: string;
   nome: string;
   email: string;
-  senha: string;
+  accessStatus: string;
+  entityStatus: string;
+  mustChangeSenha: boolean;
 }
 
 // ── Aluno ──────────────────────────────────────────────────────────────────────
@@ -47,10 +49,12 @@ export interface Aluno {
   id: string;
   nome: string;
   email: string;
-  senha: string;
   turmaId: string;
   turmaNome: string;
   escolaNome: string;
+  accessStatus: string;
+  entityStatus: string;
+  mustChangeSenha: boolean;
 }
 
 // ── Cronograma ─────────────────────────────────────────────────────────────────

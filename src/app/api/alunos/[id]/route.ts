@@ -25,32 +25,26 @@ export async function PATCH(
     const { id } = await params;
     const { nome, email, senha, turmaId } = await request.json();
 
-    if (!nome?.trim() || !email?.trim() || !senha || !turmaId) {
+    if (!nome?.trim() || !email?.trim() || !turmaId) {
       return NextResponse.json({ error: "Campos incompletos." }, { status: 400 });
     }
-    if (senha.length < 6) {
+    if (senha && senha.length < 6) {
       return NextResponse.json(
         { error: "Senha mínima de 6 caracteres." },
         { status: 400 }
       );
     }
 
-    const admin = getSupabaseAdmin();
-
-    // ── 1. Atualiza a senha no Supabase Auth ──────────────────────────────────
-    // ESSENCIAL: sem isso a nova senha não funciona no Bloquin.
-    const { error: authError } = await admin.auth.admin.updateUserById(id, {
-      password: senha,
-      // email: se o e-mail for editável no futuro, descomentar a linha abaixo
-      // email: email.trim(),
-    });
-
-    if (authError) {
-      console.error("[PATCH /api/alunos] Auth error:", authError);
-      return NextResponse.json(
-        { error: `Falha ao atualizar no Auth: ${authError.message}` },
-        { status: 500 }
-      );
+    if (senha) {
+      const admin = getSupabaseAdmin();
+      const { error: authError } = await admin.auth.admin.updateUserById(id, { password: senha });
+      if (authError) {
+        console.error("[PATCH /api/alunos] Auth error:", authError);
+        return NextResponse.json(
+          { error: `Falha ao atualizar no Auth: ${authError.message}` },
+          { status: 500 }
+        );
+      }
     }
 
     // ── 2. Atualiza na tabela perfis ──────────────────────────────────────────
@@ -58,11 +52,22 @@ export async function PATCH(
       UPDATE perfis
       SET nome     = ${nome.trim()},
           email    = ${email.trim()},
-          senha    = ${senha},
+          senha    = COALESCE(${senha || null}, senha),
           turma_id = ${turmaId}::uuid,
           updated_at = now()
       WHERE id = ${id}::uuid
         AND role = 'student'
+    `;
+
+    await sql`
+      DELETE FROM membros_turma
+      WHERE utilizador_id = ${id}::uuid
+    `;
+
+    await sql`
+      INSERT INTO membros_turma (turma_id, utilizador_id)
+      VALUES (${turmaId}::uuid, ${id}::uuid)
+      ON CONFLICT (turma_id, utilizador_id) DO NOTHING
     `;
 
     return NextResponse.json({ ok: true });

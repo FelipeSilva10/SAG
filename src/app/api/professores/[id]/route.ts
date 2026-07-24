@@ -9,13 +9,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const { nome, email, senha } = await request.json();
 
-    if (!nome || !email || !senha) {
+    if (!nome?.trim() || !email?.trim()) {
       return NextResponse.json({ error: "Campos incompletos." }, { status: 400 });
     }
 
+    if (senha && senha.length < 6) {
+      return NextResponse.json({ error: "Senha mínima de 6 caracteres." }, { status: 400 });
+    }
+
+    if (senha) {
+      const admin = getSupabaseAdmin();
+      const { error: authError } = await admin.auth.admin.updateUserById(id, { password: senha });
+      if (authError) {
+        return NextResponse.json({ error: `Falha ao atualizar a senha: ${authError.message}` }, { status: 500 });
+      }
+    }
+
     await sql`
-      UPDATE perfis 
-      SET nome = ${nome.trim()}, email = ${email.trim()}, senha = ${senha}
+      UPDATE perfis
+      SET nome = ${nome.trim()},
+          email = ${email.trim()},
+          senha = COALESCE(${senha || null}, senha),
+          updated_at = now()
       WHERE id = ${id}::uuid AND role = 'teacher'
     `;
 

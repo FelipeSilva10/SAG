@@ -11,15 +11,20 @@ export async function PATCH(
 
     await sql`
       UPDATE turmas
-      SET escola_id = ${escolaId}::uuid, nome = ${nome}, ano_letivo = ${anoLetivo}
+      SET escola_id = ${escolaId}::uuid,
+          nome = ${nome},
+          ano_letivo = ${anoLetivo},
+          professor_id = ${professorId || null}::uuid,
+          updated_at = now()
       WHERE id = ${id}::uuid
     `;
 
-    // professorId null = remover professor
-    if (professorId === null) {
-      await sql`UPDATE turmas SET professor_id = NULL WHERE id = ${id}::uuid`;
-    } else if (professorId) {
-      await sql`UPDATE turmas SET professor_id = ${professorId}::uuid WHERE id = ${id}::uuid`;
+    if (professorId) {
+      await sql`
+        INSERT INTO escola_professores (professor_id, escola_id)
+        VALUES (${professorId}::uuid, ${escolaId}::uuid)
+        ON CONFLICT (professor_id, escola_id) DO NOTHING
+      `;
     }
 
     return NextResponse.json({ ok: true });

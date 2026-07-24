@@ -59,7 +59,7 @@ export default function Table<T extends Record<string, unknown>>({
                 onClick={() => onRowClick?.(row)}
                 className={cn(
                   "border-b border-slate-100 transition-colors last:border-0",
-                  onRowClick && "cursor-pointer hover:bg-blue-50/70",
+                  onRowClick && "cursor-pointer hover:bg-indigo-50/70",
                   rowClassName?.(row)
                 )}
               >

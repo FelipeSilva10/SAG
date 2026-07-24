@@ -95,7 +95,7 @@ export function SidePanel({
             className={cn(
               "flex-none rounded-lg p-1.5 transition-colors",
               "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
-              "focus:outline-none focus:ring-2 focus:ring-blue-500/30",
+              "focus:outline-none focus:ring-2 focus:ring-indigo-500/30",
               "dark:hover:bg-slate-800 dark:hover:text-slate-300"
             )}
           >

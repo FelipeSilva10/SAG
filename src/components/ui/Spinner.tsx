@@ -32,7 +32,7 @@ export function Spinner({
     >
       <Loader2
         size={spinnerSizes[size]}
-        className="animate-spin text-blue-500 opacity-80"
+        className="animate-spin text-indigo-500 opacity-80"
         aria-hidden="true"
       />
 

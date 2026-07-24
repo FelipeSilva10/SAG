@@ -29,10 +29,10 @@ export default function Button({
   ].join(" ");
 
   const variants = {
-    primary:   "bg-blue-600 hover:bg-blue-700 text-white shadow-sm focus-visible:ring-blue-500",
-    secondary: "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 focus-visible:ring-slate-400",
+    primary:   "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm focus-visible:ring-indigo-500",
+    secondary: "border border-slate-200 bg-white hover:bg-indigo-50/40 text-slate-700 focus-visible:ring-indigo-400",
     danger:    "bg-red-600 hover:bg-red-700 text-white shadow-sm focus-visible:ring-red-500",
-    ghost:     "bg-transparent hover:bg-slate-100 text-slate-600 focus-visible:ring-slate-400",
+    ghost:     "bg-transparent hover:bg-slate-100 text-slate-600 focus-visible:ring-indigo-400",
     purple:    "bg-violet-600 hover:bg-violet-700 text-white shadow-sm focus-visible:ring-violet-500",
     success:   "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm focus-visible:ring-emerald-500",
   };

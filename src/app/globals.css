@@ -18,8 +18,8 @@
   --border-subtle: #e2e8f0;
   --border-default: #cbd5e1;
 
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
 
   --success: #16a34a;
   --danger: #dc2626;
@@ -74,7 +74,7 @@
 
   body {
     font-family: var(--font-sans);
-    background: var(--surface-0);
+    background: #f5f6fa;
     color: var(--text-primary);
 
     line-height: 1.5;
@@ -89,7 +89,7 @@
   }
 
   ::selection {
-    background: rgba(37, 99, 235, 0.18);
+    background: rgba(79, 70, 229, 0.18);
     color: inherit;
   }
 

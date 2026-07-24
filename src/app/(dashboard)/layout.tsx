@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900">
+    <div className="sag-shell flex h-screen overflow-hidden bg-[#f5f6fa] text-slate-900">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-slate-950/40 md:hidden"
@@ -88,7 +88,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      <aside className="hidden w-56 flex-none flex-col overflow-y-auto border-r border-slate-800 bg-slate-950 md:flex">
+      <aside className="hidden w-64 flex-none flex-col overflow-y-auto border-r border-slate-800 bg-[#111827] md:flex">
         <SidebarContent
           sessao={sessao}
           admin={admin}
@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-slate-800 bg-slate-950",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-hidden border-r border-slate-800 bg-[#111827]",
           "transition-transform duration-200 ease-out md:hidden",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -117,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 flex-none items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-6">
+        <header className="flex h-[4.5rem] flex-none items-center gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur md:px-8">
           <button
             className="flex-none rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 md:hidden"
             onClick={() => setSidebarOpen(true)}
@@ -126,29 +126,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Menu size={20} />
           </button>
 
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
-            <span className="font-semibold text-slate-900">SAG</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+            <span className="hidden font-medium text-slate-400 sm:inline">Painel</span>
             {currentItem && (
               <>
-                <ChevronRight size={14} className="flex-none text-slate-300" />
-                <span className="truncate font-medium text-slate-600">
+                <ChevronRight size={15} className="hidden flex-none text-slate-300 sm:inline" />
+                <span className="truncate font-semibold text-slate-800">
                   {currentItem.label}
                 </span>
               </>
             )}
           </div>
 
-          <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600 sm:flex">
-            <span className="max-w-[180px] truncate font-medium">
-              {sessao?.nome ?? "Sessão"}
-            </span>
-            <span className="rounded-md bg-white px-1.5 py-0.5 font-semibold text-slate-500">
-              {admin ? "Admin" : "Professor"}
-            </span>
+          <div className="hidden items-center gap-3 sm:flex">
+            <div className="hidden items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 lg:flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Sistema online
+            </div>
+            <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">
+              <Avatar nome={sessao?.nome ?? "Sessão"} />
+              <div className="hidden min-w-0 lg:block">
+                <p className="max-w-[150px] truncate text-xs font-bold text-slate-800">{sessao?.nome ?? "Sessão"}</p>
+                <p className="text-[11px] text-slate-400">{admin ? "Administrador" : "Professor"}</p>
+              </div>
+            </div>
           </div>
         </header>
 
-        <main className="sag-main flex-1 overflow-auto bg-slate-50">
+        <main className="sag-main flex-1 overflow-auto bg-[#f5f6fa]">
           {children}
         </main>
       </div>
@@ -173,20 +178,18 @@ function SidebarContent({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-4">
+      <div className="flex items-center justify-between border-b border-slate-800 px-5 py-5">
         <button
           type="button"
           onClick={() => onNavigate("/dashboard")}
           className="flex min-w-0 items-center gap-3 text-left"
         >
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-blue-600 text-xs font-black text-white">
-            SAG
+          <div className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-black text-white shadow-lg shadow-indigo-950/30">
+            <span className="tracking-tight">SAG</span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold leading-tight text-white">Sistema SAG</p>
-            <p className="mt-0.5 truncate text-xs leading-tight text-slate-500">
-              {sessao?.nome ?? "Carregando sessão"}
-            </p>
+            <p className="truncate text-[15px] font-bold leading-tight text-white">SAG</p>
+            <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-500">Gestão escolar</p>
           </div>
         </button>
 
@@ -201,7 +204,7 @@ function SidebarContent({
         )}
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
         <NavGroup
           label="Principal"
           items={getVisibleItems(NAV_PRINCIPAL, admin)}
@@ -223,13 +226,12 @@ function SidebarContent({
       </nav>
 
       <div className="space-y-3 border-t border-slate-800 px-3 py-4">
-        <div className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            Perfil ativo
-          </p>
-          <p className="mt-0.5 text-xs font-semibold text-slate-200">
-            {admin ? "Administrador" : "Professor"}
-          </p>
+        <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
+          <Avatar nome={sessao?.nome ?? "Sessão"} />
+          <div className="min-w-0">
+            <p className="truncate text-xs font-bold text-slate-100">{sessao?.nome ?? "Carregando sessão"}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{admin ? "Administrador" : "Professor"}</p>
+          </div>
         </div>
 
         <button
@@ -259,7 +261,7 @@ function NavGroup({
 
   return (
     <div>
-      <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+      <p className="mb-2 px-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
         {label}
       </p>
 
@@ -294,14 +296,33 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition-colors",
+        "group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
         active
-          ? "bg-blue-600 text-white shadow-sm"
+          ? "bg-indigo-500/15 text-indigo-200 shadow-sm ring-1 ring-inset ring-indigo-400/20"
           : "text-slate-400 hover:bg-slate-900 hover:text-slate-100"
       )}
     >
-      <span className="flex-none">{item.icon}</span>
+      <span className={cn("flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors", active ? "bg-indigo-500 text-white" : "text-slate-500 group-hover:text-slate-200")}>
+        {item.icon}
+      </span>
       <span className="truncate font-medium">{item.label}</span>
+      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300" />}
     </button>
+  );
+}
+
+function Avatar({ nome }: { nome: string }) {
+  const initials = nome
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase() || "S";
+
+  return (
+    <div aria-hidden="true" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700">
+      {initials}
+    </div>
   );
 }

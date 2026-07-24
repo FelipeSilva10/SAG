@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Trash2, Pencil, Users } from "lucide-react";
+import { Search, Plus, Trash2, Pencil, Users, School, UserRound, CalendarDays, SearchX } from "lucide-react";
 import { useTurmas } from "@/hooks/useTurmas";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
-import { Button, Input, Select, SidePanel, Spinner } from "@/components/ui";
+import { Badge, Button, EmptyState, Input, Select, SidePanel, Spinner } from "@/components/ui";
 import type { Turma } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -15,6 +15,7 @@ export default function TurmasPage() {
   const { turmas, loading, fetchTurmas, criar, atualizar, excluir } = useTurmas();
   const { escolas } = useEscolas(); // Reutilizando as escolas para o select
   const { isAdmin } = useSessionStore();
+  const admin = isAdmin();
 
   const [busca, setBusca] = useState("");
   const [escolaFiltro, setEscolaFiltro] = useState<string>("");
@@ -59,6 +60,9 @@ export default function TurmasPage() {
         turma.professorNome.toLowerCase().includes(t)
     );
   }, [turmas, busca]);
+
+  const escolasComTurma = new Set(turmas.map((turma) => turma.escolaId)).size;
+  const turmasSemProfessor = turmas.filter((turma) => !turma.professorId).length;
 
   function abrirNova() {
     setFormMode("new");
@@ -123,68 +127,85 @@ export default function TurmasPage() {
   }
 
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-gray-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Turmas</h1>
-            {!isAdmin() && <p className="text-xs text-gray-400 mt-0.5">Exibindo apenas suas turmas</p>}
-          </div>
+    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-8">
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600">Gestão acadêmica</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Turmas</h1>
+          <p className="mt-2 max-w-xl text-sm text-slate-500">
+            Organize as turmas por escola, ano letivo e professor responsável.
+            {!admin && " Aqui estão apenas as turmas vinculadas a você."}
+          </p>
+        </div>
+        {admin && (
+          <Button onClick={abrirNova} size="md" className="self-start sm:self-auto">
+            <Plus size={16} /> Nova turma
+          </Button>
+        )}
+      </header>
 
-          {/* Filtro de Escola (Apenas Admin) */}
-          {isAdmin() && (
-            <div className="w-full sm:ml-4 sm:w-64">
-              <Select
-                value={escolaFiltro}
-                onChange={(e) => setEscolaFiltro(e.target.value)}
-                options={[
-                  { value: "", label: "Todas as escolas..." },
-                  ...escolas.map((e) => ({ value: e.id, label: e.nome })),
-                ]}
-              />
+      <section className="grid gap-4 sm:grid-cols-3">
+        <SummaryCard label="Total de turmas" value={turmas.length} icon={<Users size={18} />} tone="indigo" />
+        <SummaryCard label="Escolas atendidas" value={escolasComTurma} icon={<School size={18} />} tone="sky" />
+        <SummaryCard label="Sem professor" value={turmasSemProfessor} icon={<UserRound size={18} />} tone={turmasSemProfessor ? "amber" : "green"} />
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Lista de turmas</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {turmasFiltradas.length} resultado{turmasFiltradas.length === 1 ? "" : "s"} encontrado{turmasFiltradas.length === 1 ? "" : "s"}
+              </p>
             </div>
-          )}
-
-          <div className="hidden sm:block sm:flex-1" />
-
-          {/* Barra de Busca */}
-          <div className="relative w-full sm:w-auto">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar turma/prof..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-lg sm:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {admin && (
+                <div className="w-full sm:w-56">
+                  <Select
+                    aria-label="Filtrar por escola"
+                    value={escolaFiltro}
+                    onChange={(e) => setEscolaFiltro(e.target.value)}
+                    options={[
+                      { value: "", label: "Todas as escolas" },
+                      ...escolas.map((e) => ({ value: e.id, label: e.nome })),
+                    ]}
+                  />
+                </div>
+              )}
+              <div className="relative w-full sm:w-72">
+                <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Buscar turma, escola ou professor"
+                  aria-label="Buscar turmas"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+            </div>
           </div>
-
-          {/* Botão Nova Turma (Apenas Admin) */}
-          {isAdmin() && (
-            <Button onClick={abrirNova} size="md" className="w-full sm:w-auto">
-              <Plus size={14} /> Nova Turma
-            </Button>
-          )}
         </div>
 
-        {/* Tabela */}
-        <div className="flex-1 overflow-auto">
-          {loading ? (
-            <Spinner />
-          ) : turmasFiltradas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-              <Users size={48} className="opacity-20 mb-2" />
-              <p className="text-sm">Nenhuma turma encontrada.</p>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
+        {loading ? (
+          <div className="py-10"><Spinner text="Carregando turmas..." /></div>
+        ) : turmasFiltradas.length === 0 ? (
+          <EmptyState
+            icon={<SearchX size={22} />}
+            title={busca || escolaFiltro ? "Nenhuma turma encontrada" : "Você ainda não tem turmas"}
+            message={busca || escolaFiltro ? "Tente remover os filtros ou buscar por outro termo." : "Cadastre a primeira turma para começar a organizar a operação."}
+            action={admin && !busca && !escolaFiltro ? <Button size="sm" onClick={abrirNova}><Plus size={14} /> Nova turma</Button> : undefined}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[780px] text-sm">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Turma</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Ano</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Escola</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Professor</th>
-                  {isAdmin() && <th className="px-4 py-3 w-24" />}
+                <tr className="border-b border-slate-100 bg-slate-50/70">
+                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Turma</th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Escola</th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Professor responsável</th>
+                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Status</th>
+                  {admin && <th className="w-24 px-4 py-3.5" aria-label="Ações" />}
                 </tr>
               </thead>
               <tbody>
@@ -192,21 +213,29 @@ export default function TurmasPage() {
                   <tr
                     key={turma.id}
                     onClick={() => abrirDetalhe(turma)}
-                    className={`border-b border-gray-100 cursor-pointer transition hover:bg-blue-50 ${editTarget?.id === turma.id ? "bg-blue-50" : ""}`}
+                    className={`group cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-indigo-50/40 ${editTarget?.id === turma.id ? "bg-indigo-50/60" : ""}`}
                   >
-                    <td className="px-6 py-3 font-medium text-gray-900">{turma.nome}</td>
-                    <td className="px-4 py-3 text-gray-600">{turma.anoLetivo}</td>
-                    <td className="px-4 py-3 text-gray-600">{turma.escolaNome}</td>
-                    <td className="px-4 py-3 text-gray-600">{turma.professorNome}</td>
-                    {isAdmin() && (
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => abrirDetalhe(turma)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600">
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => handleExcluir(turma)} disabled={deleting === turma.id} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-40">
-                            <Trash2 size={13} />
-                          </button>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><Users size={16} /></div>
+                        <div>
+                          <p className="font-bold text-slate-800">{turma.nome}</p>
+                          <div className="mt-1 flex items-center gap-1 text-xs text-slate-400"><CalendarDays size={12} /> Ano letivo {turma.anoLetivo}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2 text-slate-600"><School size={15} className="text-slate-400" /><span>{turma.escolaNome}</span></div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2 text-slate-600"><UserRound size={15} className="text-slate-400" /><span>{turma.professorNome || "Nenhum professor"}</span></div>
+                    </td>
+                    <td className="px-4 py-4"><Badge variant={turma.professorId ? "green" : "amber"} dot>{turma.professorId ? "Atribuída" : "Pendente"}</Badge></td>
+                    {admin && (
+                      <td className="px-4 py-4">
+                        <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                          <button type="button" onClick={() => abrirDetalhe(turma)} aria-label={`Editar ${turma.nome}`} title="Editar turma" className="rounded-lg p-2 text-slate-400 transition hover:bg-indigo-100 hover:text-indigo-600"><Pencil size={15} /></button>
+                          <button type="button" onClick={() => handleExcluir(turma)} disabled={deleting === turma.id} aria-label={`Excluir ${turma.nome}`} title="Excluir turma" className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"><Trash2 size={15} /></button>
                         </div>
                       </td>
                     )}
@@ -214,61 +243,65 @@ export default function TurmasPage() {
                 ))}
               </tbody>
             </table>
-          )}
-        </div>
-      </div>
-
-      {/* Painel Lateral (Formulário/Detalhes) */}
-      <SidePanel title={formMode === "new" ? "Nova Turma" : isAdmin() ? "Editar Turma" : "Detalhes da Turma"} open={panelOpen} onClose={fecharPanel}>
-        <Input 
-          label="Nome da Turma" 
-          value={nome} 
-          onChange={(e) => setNome(e.target.value)} 
-          placeholder="Ex: 1º Ano A" 
-          disabled={!isAdmin()} 
-        />
-        <Input 
-          label="Ano Letivo" 
-          value={anoLetivo} 
-          onChange={(e) => setAnoLetivo(e.target.value)} 
-          placeholder="Ex: 2026" 
-          disabled={!isAdmin()} 
-        />
-        <Select 
-          label="Escola" 
-          value={escolaIdForm} 
-          onChange={(e) => setEscolaIdForm(e.target.value)} 
-          disabled={!isAdmin()}
-          options={escolas.map((e) => ({ value: e.id, label: e.nome }))} 
-        />
-        
-        {isAdmin() && (
-          <Select 
-            label="Professor" 
-            value={professorIdForm} 
-            onChange={(e) => setProfessorIdForm(e.target.value)} 
-            options={[
-              { value: "", label: "Sem professor atribuído" },
-              ...professores.map((p) => ({ value: p.id, label: p.nome })),
-            ]} 
-          />
+          </div>
         )}
+      </section>
 
-        {isAdmin() && (
-          <div className="pt-4">
-            <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">
-              {formMode === "new" ? "Cadastrar Turma" : "Salvar Alterações"}
-            </Button>
-            {formMode === "edit" && editTarget && (
-              <div className="pt-2 border-t border-gray-100 mt-2">
-                <Button variant="danger" onClick={() => handleExcluir(editTarget)} loading={deleting === editTarget.id} className="w-full justify-center">
-                  <Trash2 size={13} /> Excluir Turma
-                </Button>
-              </div>
-            )}
+      <SidePanel
+        title={formMode === "new" ? "Nova turma" : admin ? "Editar turma" : "Detalhes da turma"}
+        subtitle={formMode === "new" ? "Preencha os dados para criar o vínculo." : "Confira ou atualize as informações cadastradas."}
+        open={panelOpen}
+        onClose={fecharPanel}
+        width="w-80 sm:w-[26rem]"
+      >
+        <div className="rounded-xl bg-indigo-50 px-4 py-3 text-xs leading-relaxed text-indigo-800">
+          {admin ? "Uma turma precisa estar vinculada a uma escola. O professor pode ser atribuído agora ou depois." : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
+        </div>
+        <div className="border-t border-slate-100 pt-4">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Informações básicas</p>
+          <div className="space-y-4">
+            <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
+            <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
+            <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin} options={escolas.map((e) => ({ value: e.id, label: e.nome }))} />
+            {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
+          </div>
+        </div>
+        {admin && (
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">{formMode === "new" ? "Criar turma" : "Salvar alterações"}</Button>
+            {formMode === "edit" && editTarget && <Button variant="ghost" onClick={() => handleExcluir(editTarget)} loading={deleting === editTarget.id} className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"><Trash2 size={14} /> Excluir turma</Button>}
           </div>
         )}
       </SidePanel>
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  tone: "indigo" | "sky" | "amber" | "green";
+}) {
+  const tones = {
+    indigo: "bg-indigo-50 text-indigo-600",
+    sky: "bg-sky-50 text-sky-600",
+    amber: "bg-amber-50 text-amber-600",
+    green: "bg-emerald-50 text-emerald-600",
+  };
+
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${tones[tone]}`}>{icon}</div>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+        <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+      </div>
     </div>
   );
 }

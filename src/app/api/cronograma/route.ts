@@ -3,6 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { CronogramaAula } from "@/lib/types";
+import {
+  getRequestSession,
+  resolveProfessorId,
+} from "@/lib/request-authorization";
 
 function mapSlot(r: Record<string, unknown>): CronogramaAula {
   return {
@@ -37,7 +41,14 @@ const BASE_SELECT = `
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const professorId = searchParams.get("professorId");
+  const session = getRequestSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+  }
+  const professorId = resolveProfessorId(
+    session,
+    searchParams.get("professorId"),
+  );
 
   try {
     let rows;
@@ -90,8 +101,33 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { professorId, turmaId, diaSemana, horarioInicio, horarioFim,
-            tipo, dataInicio, dataFim, criadoPor } = await request.json();
+    const session = getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    }
+
+    const { professorId: requestedProfessorId, turmaId, diaSemana, horarioInicio, horarioFim,
+            tipo, dataInicio, dataFim } = await request.json();
+    const professorId = resolveProfessorId(session, requestedProfessorId);
+    if (!professorId) {
+      return NextResponse.json({ error: "Professor é obrigatório." }, { status: 400 });
+    }
+
+    if (session.actor.role === "TEACHER") {
+      const ownedClass = await sql`
+        SELECT 1
+        FROM turmas
+        WHERE id = ${turmaId}::uuid
+          AND professor_id = ${session.actor.id}::uuid
+        LIMIT 1
+      `;
+      if (ownedClass.length === 0) {
+        return NextResponse.json(
+          { error: "Turma não autorizada." },
+          { status: 403 },
+        );
+      }
+    }
 
     await sql`
       INSERT INTO cronograma_aulas
@@ -103,7 +139,7 @@ export async function POST(request: NextRequest) {
         ${tipo ?? "AULA"},
         ${dataInicio ?? null}::date,
         ${dataFim ?? null}::date,
-        ${criadoPor ?? "ADMIN"}
+        ${session.actor.role === "ADMIN" ? "ADMIN" : "PROFESSOR"}
       )
     `;
 

@@ -12,6 +12,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { UsuarioSessao } from "@/lib/types";
+import {
+  clearPanelSessionCookies,
+  createDirectPanelSession,
+  getPanelSessionToken,
+  revokePanelSessionToken,
+  setPanelSessionCookie,
+} from "@/lib/panel-session";
 
 interface ProfRow {
   id: string;
@@ -114,15 +121,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── 4. Seta cookie httpOnly e retorna sessão ──────────────────────────────
-    const response = NextResponse.json({ sessao });
-    response.cookies.set("sag_session", JSON.stringify(sessao), {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge:   60 * 60 * 8, // 8 horas
-      path:     "/",
-    });
+    // ── 4. Cria sessão opaca, persistida somente como SHA-256 ──────────────────
+    const panelSession = await createDirectPanelSession(sessao);
+    const response = NextResponse.json(
+      { sessao: panelSession.session.actor },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+    setPanelSessionCookie(response, panelSession.rawToken);
 
     return response;
   } catch (error) {
@@ -136,8 +141,15 @@ export async function POST(request: NextRequest) {
 
 // ── DELETE /api/auth/login → logout ──────────────────────────────────────────
 
-export async function DELETE() {
-  const response = NextResponse.json({ ok: true });
-  response.cookies.delete("sag_session");
+export async function DELETE(request: NextRequest) {
+  await revokePanelSessionToken(
+    getPanelSessionToken(request),
+    "panel_logout",
+  );
+  const response = NextResponse.json(
+    { ok: true },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+  clearPanelSessionCookies(response);
   return response;
 }

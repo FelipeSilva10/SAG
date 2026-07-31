@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import {
+  getRequestSession,
+  resolveProfessorId,
+} from "@/lib/request-authorization";
  
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const professorId = searchParams.get("professorId");
+  const session = getRequestSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+  }
+  const professorId = resolveProfessorId(
+    session,
+    searchParams.get("professorId"),
+  );
   const turmaId = searchParams.get("turmaId");
   const data = searchParams.get("data");
  

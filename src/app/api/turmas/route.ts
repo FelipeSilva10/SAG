@@ -3,6 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { Turma } from "@/lib/types";
+import {
+  getRequestSession,
+  resolveProfessorId,
+} from "@/lib/request-authorization";
 
 function mapTurma(r: Record<string, unknown>): Turma {
   return {
@@ -19,7 +23,14 @@ function mapTurma(r: Record<string, unknown>): Turma {
 // GET /api/turmas?professorId=xxx  ou  ?escolaId=xxx  ou sem parâmetro (todas)
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const professorId = searchParams.get("professorId");
+  const session = getRequestSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+  }
+  const professorId = resolveProfessorId(
+    session,
+    searchParams.get("professorId"),
+  );
   const escolaId = searchParams.get("escolaId");
 
   try {

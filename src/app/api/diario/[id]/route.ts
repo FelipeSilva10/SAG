@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import { getRequestSession } from "@/lib/request-authorization";
  
 export async function PATCH(
   request: NextRequest,
@@ -8,14 +9,37 @@ export async function PATCH(
   const { id } = await params;
   const { dataAula, titulo, conteudo, observacoes } = await request.json();
   try {
-    await sql`
-      UPDATE diario_aulas
-      SET data_aula = ${dataAula}::date,
-          titulo = ${titulo ?? ""},
-          conteudo = ${conteudo ?? ""},
-          observacoes = ${observacoes ?? ""}
-      WHERE id = ${id}::uuid
-    `;
+    const session = getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    }
+
+    const updated = session.actor.role === "ADMIN"
+      ? await sql`
+          UPDATE diario_aulas
+          SET data_aula = ${dataAula}::date,
+              titulo = ${titulo ?? ""},
+              conteudo = ${conteudo ?? ""},
+              observacoes = ${observacoes ?? ""}
+          WHERE id = ${id}::uuid
+          RETURNING id
+        `
+      : await sql`
+          UPDATE diario_aulas
+          SET data_aula = ${dataAula}::date,
+              titulo = ${titulo ?? ""},
+              conteudo = ${conteudo ?? ""},
+              observacoes = ${observacoes ?? ""}
+          WHERE id = ${id}::uuid
+            AND professor_id = ${session.actor.id}::uuid
+          RETURNING id
+        `;
+    if (updated.length === 0) {
+      return NextResponse.json(
+        { error: "Registro não encontrado ou não autorizado." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[PATCH /api/diario/[id]]", error);
@@ -24,12 +48,34 @@ export async function PATCH(
 }
  
 export async function DELETE(
-  _req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
-    await sql`DELETE FROM diario_aulas WHERE id = ${id}::uuid`;
+    const session = getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    }
+
+    const deleted = session.actor.role === "ADMIN"
+      ? await sql`
+          DELETE FROM diario_aulas
+          WHERE id = ${id}::uuid
+          RETURNING id
+        `
+      : await sql`
+          DELETE FROM diario_aulas
+          WHERE id = ${id}::uuid
+            AND professor_id = ${session.actor.id}::uuid
+          RETURNING id
+        `;
+    if (deleted.length === 0) {
+      return NextResponse.json(
+        { error: "Registro não encontrado ou não autorizado." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[DELETE /api/diario/[id]]", error);

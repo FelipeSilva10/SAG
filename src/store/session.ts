@@ -4,7 +4,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type { UsuarioSessao } from "@/lib/types";
 
 interface SessionStore {
@@ -14,20 +13,12 @@ interface SessionStore {
   isAdmin: () => boolean;
 }
 
-export const useSessionStore = create<SessionStore>()(
-  persist(
-    (set, get) => ({
-      sessao: null,
+export const useSessionStore = create<SessionStore>()((set, get) => ({
+  sessao: null,
 
-      setSessao: (sessao) => set({ sessao }),
+  setSessao: (sessao) => set({ sessao }),
 
-      clearSessao: () => set({ sessao: null }),
+  clearSessao: () => set({ sessao: null }),
 
-      // Equivalente ao isAdmin() do MainFX.java
-      isAdmin: () => get().sessao?.role === "ADMIN",
-    }),
-    {
-      name: "sag-session", // chave no localStorage
-    }
-  )
-);
+  isAdmin: () => get().sessao?.role === "ADMIN",
+}));

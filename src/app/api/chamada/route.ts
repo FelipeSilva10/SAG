@@ -3,11 +3,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { Chamada, ChamadaPresenca } from "@/lib/types";
+import {
+  getRequestSession,
+  resolveProfessorId,
+} from "@/lib/request-authorization";
 
 // GET /api/chamada?professorId=xxx
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const professorId = searchParams.get("professorId");
+  const session = getRequestSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+  }
+  const professorId = resolveProfessorId(
+    session,
+    searchParams.get("professorId"),
+  );
 
   if (!professorId) {
     return NextResponse.json({ error: "professorId é obrigatório." }, { status: 400 });
@@ -53,7 +64,12 @@ export async function GET(request: NextRequest) {
 // POST /api/chamada — abre nova chamada com presenças (transação)
 export async function POST(request: NextRequest) {
   try {
-    const { professorId, turmaId, cronogramaId, dataAula, horarioInicio, horarioFim, presencas } =
+    const session = getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    }
+
+    const { professorId: requestedProfessorId, turmaId, cronogramaId, dataAula, horarioInicio, horarioFim, presencas } =
       await request.json() as {
         professorId: string;
         turmaId: string;
@@ -63,6 +79,26 @@ export async function POST(request: NextRequest) {
         horarioFim: string;
         presencas: ChamadaPresenca[];
       };
+    const professorId = resolveProfessorId(session, requestedProfessorId);
+    if (!professorId) {
+      return NextResponse.json({ error: "Professor é obrigatório." }, { status: 400 });
+    }
+
+    if (session.actor.role === "TEACHER") {
+      const ownedClass = await sql`
+        SELECT 1
+        FROM turmas
+        WHERE id = ${turmaId}::uuid
+          AND professor_id = ${session.actor.id}::uuid
+        LIMIT 1
+      `;
+      if (ownedClass.length === 0) {
+        return NextResponse.json(
+          { error: "Turma não autorizada." },
+          { status: 403 },
+        );
+      }
+    }
 
     // Verifica duplicata
     const existe = await sql`

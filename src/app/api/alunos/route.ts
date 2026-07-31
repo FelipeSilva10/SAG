@@ -5,6 +5,10 @@ import sql from "@/lib/db";
 import { getSupabaseServer } from "@/lib/supabase-server";
 import type { Aluno } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import {
+  getRequestSession,
+  resolveProfessorId,
+} from "@/lib/request-authorization";
 
 const BASE_SELECT = sql`
   SELECT p.id, p.nome, p.email, p.turma_id,
@@ -33,13 +37,34 @@ function mapAluno(r: Record<string, unknown>): Aluno {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const professorId = searchParams.get("professorId");
+  const session = getRequestSession(request);
+  if (!session) {
+    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+  }
+  const professorId = resolveProfessorId(
+    session,
+    searchParams.get("professorId"),
+  );
   const turmaId = searchParams.get("turmaId");
 
   try {
     let rows;
 
-    if (turmaId) {
+    if (session.actor.role === "TEACHER") {
+      rows = await sql`
+        SELECT p.id, p.nome, p.email, p.turma_id,
+               p.access_status, p.entity_status, p.must_change_senha,
+               COALESCE(t.nome,'Sem Turma') AS turma_nome,
+               COALESCE(e.nome,'Sem Escola') AS escola_nome
+        FROM perfis p
+        JOIN turmas t ON p.turma_id = t.id
+        LEFT JOIN escolas e ON t.escola_id = e.id
+        WHERE p.role = 'student'
+          AND t.professor_id = ${professorId}::uuid
+          AND (${turmaId}::uuid IS NULL OR p.turma_id = ${turmaId}::uuid)
+        ORDER BY p.nome ASC
+      `;
+    } else if (turmaId) {
       rows = await sql`
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,

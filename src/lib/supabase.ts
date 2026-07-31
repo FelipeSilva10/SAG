@@ -1,14 +1,8 @@
-// src/lib/supabase.ts — APENAS browser client
-// Importe este arquivo em componentes "use client"
-import { createBrowserClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import "server-only";
 
-export function getSupabaseBrowser() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+// Clientes Supabase exclusivos do backend do SAG. A marcação server-only
+// impede que a chave service_role entre acidentalmente em um bundle cliente.
+import { createClient } from "@supabase/supabase-js";
 
 export function getSupabaseAdmin() {
   return createClient(

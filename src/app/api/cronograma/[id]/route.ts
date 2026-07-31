@@ -1,13 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import { getRequestSession } from "@/lib/request-authorization";
  
 export async function DELETE(
-  _req: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   try {
-    await sql`DELETE FROM cronograma_aulas WHERE id = ${id}::uuid`;
+    const session = getRequestSession(request);
+    if (!session) {
+      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    }
+
+    const deleted = session.actor.role === "ADMIN"
+      ? await sql`
+          DELETE FROM cronograma_aulas
+          WHERE id = ${id}::uuid
+          RETURNING id
+        `
+      : await sql`
+          DELETE FROM cronograma_aulas
+          WHERE id = ${id}::uuid
+            AND professor_id = ${session.actor.id}::uuid
+          RETURNING id
+        `;
+    if (deleted.length === 0) {
+      return NextResponse.json(
+        { error: "Registro não encontrado ou não autorizado." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[DELETE /api/cronograma/[id]]", error);

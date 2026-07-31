@@ -1,56 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { getSupabaseBrowser } from "@/lib/supabase";
-import { Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { useSessionStore } from "@/store/session";
+import type { UsuarioSessao } from "@/lib/types";
 
 function AutoLoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const setSessao = useSessionStore((state) => state.setSessao);
   const [status, setStatus] = useState<"loading" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     const run = async () => {
-      const accessToken  = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
+      const fragment = new URLSearchParams(window.location.hash.slice(1));
+      const code = fragment.get("code");
+      window.history.replaceState(null, "", "/auto-login");
 
-      if (!accessToken || !refreshToken) {
-        router.replace("/login");
+      if (!code) {
+        setStatus("error");
+        setErrorMsg("Código de acesso ausente. Feche esta janela e abra o painel novamente pelo Bloquin.");
         return;
       }
 
-      const supabase = getSupabaseBrowser();
-
-      const { data, error } = await supabase.auth.setSession({
-        access_token:  accessToken,
-        refresh_token: refreshToken,
+      const response = await fetch("/api/auth/handoff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+        cache: "no-store",
       });
+      const result = await response.json() as {
+        sessao?: UsuarioSessao;
+        error?: string;
+      };
 
-      if (error || !data.session) {
+      if (!response.ok || !result.sessao) {
         setStatus("error");
-        setErrorMsg("Sessão inválida ou expirada. Feche esta janela e tente novamente.");
+        setErrorMsg(result.error ?? "Código inválido ou expirado. Abra o painel novamente pelo Bloquin.");
         return;
       }
 
-      const { data: perfil, error: perfilError } = await supabase
-        .from("perfis")
-        .select("role")
-        .eq("id", data.session.user.id)
-        .single();
-
-      if (perfilError || perfil?.role !== "teacher") {
-        await supabase.auth.signOut();
-        setStatus("error");
-        setErrorMsg("Acesso restrito a professores.");
-        return;
-      }
-
+      setSessao(result.sessao);
       router.replace("/dashboard");
     };
 
-    run();
+    void run().catch(() => {
+      setStatus("error");
+      setErrorMsg("Não foi possível conectar ao painel. Feche esta janela e tente novamente.");
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -101,20 +98,5 @@ function AutoLoginContent() {
 }
 
 export default function AutoLoginPage() {
-  return (
-    <Suspense fallback={
-      <div style={{
-        minHeight: "100vh", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: "16px",
-        background: "#f0f2f5", fontFamily: "system-ui, sans-serif",
-      }}>
-        <span style={{ fontSize: "3rem" }}>⚙️</span>
-        <p style={{ color: "#2f3542", fontWeight: 800, fontSize: "1.1rem" }}>
-          Carregando…
-        </p>
-      </div>
-    }>
-      <AutoLoginContent />
-    </Suspense>
-  );
+  return <AutoLoginContent />;
 }

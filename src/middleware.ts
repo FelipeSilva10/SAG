@@ -1,40 +1,92 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// middleware.ts — equivalente ao controle de acesso do MainFX.java
-//
-// Regras:
-//  - /login e /api/auth/login → públicas
-//  - rotas do app → requerem sessão ativa (cookie)
-//  - Redireciona para /login se não autenticado
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  LEGACY_PANEL_SESSION_COOKIE,
+  PANEL_SESSION_COOKIE,
+} from "@/lib/panel-session-core";
+import { validatePanelSessionToken } from "@/lib/panel-session-validation";
+import {
+  removeTrustedPanelSessionHeaders,
+  writeTrustedPanelSessionHeaders,
+} from "@/lib/trusted-panel-session";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auto-login",
+  "/api/auth/login",
+  "/api/auth/handoff",
+];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
+
+function unauthorizedResponse(request: NextRequest): NextResponse {
+  const response = request.nextUrl.pathname.startsWith("/api/")
+    ? NextResponse.json(
+      { error: "Sessão inválida ou expirada." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    )
+    : NextResponse.redirect(
+      new URL(
+        `/login?next=${encodeURIComponent(request.nextUrl.pathname)}`,
+        request.url,
+      ),
+    );
+  response.cookies.delete(PANEL_SESSION_COOKIE);
+  response.cookies.delete(LEGACY_PANEL_SESSION_COOKIE);
+  return response;
+}
+
+function forbiddenResponse(request: NextRequest): NextResponse {
+  return request.nextUrl.pathname.startsWith("/api/")
+    ? NextResponse.json(
+      { error: "Seu perfil não tem permissão para esta operação." },
+      { status: 403, headers: { "Cache-Control": "no-store" } },
+    )
+    : NextResponse.redirect(new URL("/dashboard", request.url));
+}
+
+function isAdminOnlyRequest(request: NextRequest): boolean {
+  const { pathname } = request.nextUrl;
+  if (pathname === "/professores" || pathname.startsWith("/professores/")) {
+    return true;
+  }
+  if (pathname.startsWith("/api/professores")) return true;
+  return (
+    request.method !== "GET"
+    && (
+      pathname.startsWith("/api/escolas")
+      || pathname.startsWith("/api/turmas")
+      || pathname.startsWith("/api/alunos")
+    )
+  );
+}
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+  removeTrustedPanelSessionHeaders(requestHeaders);
 
-  // Rotas públicas passam livremente
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+  if (isPublicPath(request.nextUrl.pathname)) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Verifica cookie de sessão (setado pela API de login)
-  const sessionCookie = request.cookies.get("sag_session");
+  const rawToken = request.cookies.get(PANEL_SESSION_COOKIE)?.value;
+  const session = await validatePanelSessionToken(rawToken);
+  if (!session) return unauthorizedResponse(request);
 
-  if (!sessionCookie?.value) {
-    const loginUrl = new URL("/login", request.url);
-    // Preserva a rota de destino para redirecionar depois do login
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (session.actor.role !== "ADMIN" && isAdminOnlyRequest(request)) {
+    return forbiddenResponse(request);
   }
 
-  return NextResponse.next();
+  writeTrustedPanelSessionHeaders(requestHeaders, session);
+
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
   matcher: [
-    // Aplica o middleware a todas as rotas exceto assets estáticos
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.png$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)$).*)",
   ],
 };

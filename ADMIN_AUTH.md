@@ -27,12 +27,13 @@ ignorados; alterações também validam a posse da turma ou do registro.
 Variáveis server-side necessárias:
 
 - `NEXT_PUBLIC_SUPABASE_URL`;
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`;
-- `SUPABASE_SERVICE_ROLE_KEY`;
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`;
+- `SUPABASE_SECRET_KEY`;
+- `AUTH_SECRET`;
 - credenciais `DB_*` já usadas pelas rotas do SAG.
 
-O `SUPABASE_SERVICE_ROLE_KEY` nunca pode usar prefixo `NEXT_PUBLIC_`, aparecer
-em resposta, log, código cliente ou configuração Tauri.
+O `SUPABASE_SECRET_KEY` nunca pode usar prefixo `NEXT_PUBLIC_`, aparecer em
+resposta, log, código cliente ou configuração Tauri.
 
 Validação local:
 

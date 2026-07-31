@@ -5,9 +5,15 @@ import { cookies } from "next/headers";
 
 export async function getSupabaseServer() {
   const cookieStore = await cookies();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !publishableKey?.startsWith("sb_publishable_")) {
+    throw new Error("Supabase público não configurado.");
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    publishableKey,
     {
       cookies: {
         getAll() { return cookieStore.getAll(); },

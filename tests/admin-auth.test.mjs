@@ -76,6 +76,34 @@ test("auto-login não aceita tokens da sessão principal", async () => {
   assert.match(source, /\/api\/auth\/handoff/u);
 });
 
+test("clientes Supabase usam somente as chaves atuais", async () => {
+  const [adminSource, serverSource] = await Promise.all([
+    readFile(new URL("../src/lib/supabase.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/lib/supabase-server.ts", import.meta.url), "utf8"),
+  ]);
+  const source = `${adminSource}\n${serverSource}`;
+  const legacyPublicName = [
+    "NEXT",
+    "PUBLIC",
+    "SUPABASE",
+    "ANON",
+    "KEY",
+  ].join("_");
+  const legacyPrivilegedName = [
+    "SUPABASE",
+    "SERVICE",
+    "ROLE",
+    "KEY",
+  ].join("_");
+
+  assert.match(source, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/u);
+  assert.match(source, /SUPABASE_SECRET_KEY/u);
+  assert.match(source, /sb_publishable_/u);
+  assert.match(source, /sb_secret_/u);
+  assert.equal(source.includes(legacyPublicName), false);
+  assert.equal(source.includes(legacyPrivilegedName), false);
+});
+
 test("professor não consegue selecionar outro professor por parâmetro", () => {
   const session = {
     sessionId: "session-id",

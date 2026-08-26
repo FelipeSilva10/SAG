@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     session,
     searchParams.get("professorId"),
   );
+  const escolaId = searchParams.get("escolaId");
   const mes = searchParams.get("mes");    // "1" a "12" ou omitido
   const ano = searchParams.get("ano");    // "2025" ou omitido
 
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
           AND chamada_presencas.presente = true
       ) AS presencas ON true
       WHERE (${professorId}::uuid IS NULL OR professor_id = ${professorId}::uuid)
+        AND (${escolaId}::uuid IS NULL OR registro.escola_id = ${escolaId}::uuid)
         AND (${mes ? Number(mes) : null}::int IS NULL OR mes = ${mes ? Number(mes) : null}::int)
         AND (${ano ? Number(ano) : null}::int IS NULL OR ano = ${ano ? Number(ano) : null}::int)
       ORDER BY data_aula DESC, professor_nome, horario_inicio

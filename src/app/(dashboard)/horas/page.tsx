@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Clock, Download, RefreshCw, TrendingUp, Users, BookOpen } from "lucide-react";
 import { useSessionStore } from "@/store/session";
+import { useEscolas } from "@/hooks/useEscolas";
 import { Select, Spinner } from "@/components/ui";
 import toast from "react-hot-toast";
 import type { RegistroHoras } from "@/lib/types";
@@ -64,8 +65,10 @@ export default function HorasPage() {
 
   const [registros, setRegistros] = useState<RegistroHoras[]>([]);
   const [professores, setProfessores] = useState<Professor[]>([]);
+  const { escolas } = useEscolas();
   const [loading, setLoading] = useState(true);
   const [profFiltro, setProfFiltro] = useState("");
+  const [naicaFiltro, setNaicaFiltro] = useState("");
 
   const anoAtual = new Date().getFullYear();
   const [mes, setMes] = useState("");
@@ -81,6 +84,7 @@ export default function HorasPage() {
       const params = new URLSearchParams();
       if (!admin) params.set("professorId", profId);
       else if (profFiltro) params.set("professorId", profFiltro);
+      if (naicaFiltro) params.set("escolaId", naicaFiltro);
       if (mes) params.set("mes", String(MESES.indexOf(mes) + 1));
       if (ano) params.set("ano", ano);
 
@@ -89,7 +93,7 @@ export default function HorasPage() {
       setRegistros(Array.isArray(data) ? data : []);
     } catch { toast.error("Erro ao carregar horas."); }
     finally { setLoading(false); }
-  }, [admin, profId, profFiltro, mes, ano]);
+  }, [admin, profId, profFiltro, naicaFiltro, mes, ano]);
 
   useEffect(() => { carregar(); }, [carregar]);
 
@@ -187,6 +191,17 @@ export default function HorasPage() {
             />
           </div>
         )}
+
+        <div className="w-full sm:w-48">
+          <Select
+            value={naicaFiltro}
+            onChange={(e) => setNaicaFiltro(e.target.value)}
+            options={[
+              { value: "", label: "Todos os NAICAs" },
+              ...escolas.map((escola) => ({ value: escola.id, label: escola.nome })),
+            ]}
+          />
+        </div>
 
         <div className="w-full sm:w-36">
           <Select

@@ -36,6 +36,11 @@ function formatarHoras(h: number): string {
   return `${hrs}h ${min}min`;
 }
 
+function escaparCSV(valor: string | number | null | undefined): string {
+  const texto = String(valor ?? "");
+  return /[",\r\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+}
+
 function Card({
   titulo, valor, cor, icone,
 }: { titulo: string; valor: string; cor: string; icone: React.ReactNode }) {
@@ -131,18 +136,23 @@ export default function HorasPage() {
 
   function exportarCSV() {
     const linhas = [
-      ["Data", "Professor", "Turma", "Escola", "Tipo", "Horário", "Horas", "Presentes", "Total"].join(","),
+      [
+        "Data", "Professor", "Turma", "Escola", "Tipo", "Horário de início",
+        "Horário de fim", "Quantidade de horas", "Alunos presentes", "Presentes", "Total de alunos",
+      ].map(escaparCSV).join(","),
       ...listaExibida.map((r) => [
         formatarData(r.dataAula),
         r.professorNome,
         r.turmaNome,
         r.escolaNome,
         r.tipoAula,
-        `${r.horarioInicio}-${r.horarioFim}`,
+        r.horarioInicio,
+        r.horarioFim,
         formatarHoras(r.horasMinistradas),
+        r.alunosPresentes || "—",
         r.totalPresentes,
         r.totalAlunos,
-      ].join(",")),
+      ].map(escaparCSV).join(",")),
     ];
     const blob = new Blob(["\uFEFF" + linhas.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);

@@ -154,6 +154,7 @@ export interface RegistroHoras {
   totalAlunos: number;
   totalPresentes: number;
   totalAusentes: number;
+  alunosPresentes: string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

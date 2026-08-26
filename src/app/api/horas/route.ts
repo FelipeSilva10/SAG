@@ -29,8 +29,16 @@ export async function GET(request: NextRequest) {
              COALESCE(escola_tipo, 'PUBLICA') AS escola_tipo,
              data_aula::text AS data_aula,
              horario_inicio, horario_fim, tipo_aula,
-             horas_ministradas, total_alunos, total_presentes, total_ausentes
-      FROM v_registro_horas
+             horas_ministradas, total_alunos, total_presentes, total_ausentes,
+             COALESCE(presencas.alunos_presentes, '') AS alunos_presentes
+      FROM v_registro_horas AS registro
+      LEFT JOIN LATERAL (
+        SELECT STRING_AGG(perfis.nome, '; ' ORDER BY perfis.nome) AS alunos_presentes
+        FROM chamada_presencas
+        JOIN perfis ON perfis.id = chamada_presencas.aluno_id
+        WHERE chamada_presencas.chamada_id = registro.chamada_id
+          AND chamada_presencas.presente = true
+      ) AS presencas ON true
       WHERE (${professorId}::uuid IS NULL OR professor_id = ${professorId}::uuid)
         AND (${mes ? Number(mes) : null}::int IS NULL OR mes = ${mes ? Number(mes) : null}::int)
         AND (${ano ? Number(ano) : null}::int IS NULL OR ano = ${ano ? Number(ano) : null}::int)
@@ -53,6 +61,7 @@ export async function GET(request: NextRequest) {
       totalAlunos: Number(r.total_alunos),
       totalPresentes: Number(r.total_presentes),
       totalAusentes: Number(r.total_ausentes),
+      alunosPresentes: r.alunos_presentes as string,
     }));
 
     return NextResponse.json(lista);

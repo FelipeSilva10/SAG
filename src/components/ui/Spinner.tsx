@@ -32,12 +32,12 @@ export function Spinner({
     >
       <Loader2
         size={spinnerSizes[size]}
-        className="animate-spin text-indigo-500 opacity-80"
+        className="animate-spin text-[#23638c] opacity-80"
         aria-hidden="true"
       />
 
       {text && (
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+        <p className="text-sm font-medium text-[#62798a]">
           {text}
         </p>
       )}

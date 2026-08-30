@@ -34,24 +34,18 @@ export function EmptyState({
         aria-hidden="true"
         className={cn(
           "mb-4 flex h-12 w-12 items-center justify-center",
-          "rounded-lg bg-slate-100 text-slate-400",
-          "dark:bg-slate-800"
+          "rounded-lg bg-[#f3f7fa] text-[#8ea0b0]"
         )}
       >
         {icon ?? (emoji ? <span className="text-2xl">{emoji}</span> : <Inbox size={22} />)}
       </div>
 
-      <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+      <h3 className="text-sm font-bold text-[#1f2d3a]">
         {title}
       </h3>
 
       {message && (
-        <p
-          className={cn(
-            "mt-1 max-w-xs text-xs leading-relaxed",
-            "text-slate-400 dark:text-slate-500"
-          )}
-        >
+        <p className="mt-1 max-w-xs text-xs leading-relaxed text-[#62798a]">
           {message}
         </p>
       )}

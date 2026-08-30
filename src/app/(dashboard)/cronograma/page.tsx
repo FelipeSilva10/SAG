@@ -2,13 +2,25 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  Plus, Trash2, Calendar, Clock, RefreshCw, X, ChevronDown,
+  Plus, Trash2, Calendar, Clock, RefreshCw,
 } from "lucide-react";
 import { useSessionStore } from "@/store/session";
-import { Button, Input, Select, SidePanel, Spinner, Badge } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Select,
+  SidePanel,
+  Spinner,
+  Badge,
+  PageHeader,
+  Table,
+  type Column,
+  EmptyState,
+  useConfirmDialog,
+} from "@/components/ui";
 import toast from "react-hot-toast";
 import type { CronogramaAula, GrupoCronograma, Turma } from "@/lib/types";
-import { ABREV_DIA, TIPO_LABEL, DIAS_SEMANA } from "@/lib/types";
+import { TIPO_LABEL, DIAS_SEMANA } from "@/lib/types";
 
 // ── Tipos locais ────────────────────────────────────────────────────────────
 interface Professor { id: string; nome: string; }
@@ -67,6 +79,7 @@ function formatarPeriodo(g: GrupoCronograma): string {
 // ── Componente principal ─────────────────────────────────────────────────────
 export default function CronogramaPage() {
   const { sessao, isAdmin } = useSessionStore();
+  const confirm = useConfirmDialog();
   const admin = isAdmin();
 
   const [slots, setSlots] = useState<CronogramaAula[]>([]);
@@ -164,7 +177,13 @@ export default function CronogramaPage() {
   }
 
   async function handleExcluir(g: GrupoCronograma) {
-    if (!confirm(`Remover ${g.dias.length} dia(s) deste horário?`)) return;
+    const ok = await confirm({
+      title: "Remover horário",
+      description: `Remover ${g.dias.length} dia(s) deste horário?`,
+      confirmLabel: "Remover",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await Promise.all(
         g.ids.map((id) =>
@@ -251,81 +270,127 @@ export default function CronogramaPage() {
   const isAula = tipo === "AULA";
   const turmasForm = admin ? turmasDispProfForm : turmas;
 
+  const columns: Column<GrupoCronograma>[] = [
+    ...(admin
+      ? [{ key: "professorNome", header: "Professor" } as Column<GrupoCronograma>]
+      : []),
+    { key: "turmaNome", header: "Turma" },
+    {
+      key: "tipo",
+      header: "Tipo",
+      render: (g) => (
+        <Badge variant={g.tipo === "AULA" ? "blue" : g.tipo === "REUNIÃO" ? "purple" : "amber"}>
+          {TIPO_LABEL[g.tipo as keyof typeof TIPO_LABEL] ?? g.tipo}
+        </Badge>
+      ),
+    },
+    {
+      key: "dias",
+      header: "Dias",
+      render: (g) => (
+        <span className="font-mono text-xs text-[#45566a]">
+          {g.dias.map((d) => DIAS_LABELS[d] ?? d).join(" · ")}
+        </span>
+      ),
+    },
+    {
+      key: "horario",
+      header: "Horário",
+      render: (g) => (
+        <span className="flex items-center gap-1 text-[#45566a]">
+          <Clock size={12} className="text-[#8ea0b0]" />
+          {g.horarioInicio} – {g.horarioFim}
+        </span>
+      ),
+    },
+    {
+      key: "periodo",
+      header: "Período",
+      render: (g) => <span className="text-xs text-[#62798a]">{formatarPeriodo(g)}</span>,
+    },
+    {
+      key: "acoes",
+      header: "",
+      width: "w-16",
+      render: (g) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleExcluir(g); }}
+          className="rounded p-1.5 text-[#8ea0b0] transition hover:bg-red-50 hover:text-red-600"
+          aria-label="Remover horário"
+        >
+          <Trash2 size={13} />
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="flex h-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Cronograma</h1>
-            {!admin && (
-              <p className="text-xs text-gray-400 mt-0.5">
-                {slots.filter((s) => !["REUNIÃO", "AULA_SUBSTITUTA"].includes(s.tipo)).length} aulas regulares
-              </p>
-            )}
-          </div>
-
-          {admin && (
-            <div className="w-full sm:w-56">
-              <Select
-                value={filtroProfId}
-                onChange={(e) => setFiltroProfId(e.target.value)}
-                options={[
-                  { value: "", label: "Todos os professores" },
-                  ...professores.map((p) => ({ value: p.id, label: p.nome })),
-                ]}
-              />
-            </div>
-          )}
-
-          <div className="hidden sm:block sm:flex-1" />
-
-          <button
-            onClick={carregar}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-            title="Atualizar"
-          >
-            <RefreshCw size={15} />
-          </button>
-
-          <Button onClick={abrirNovo} size="md" className="w-full sm:w-auto">
-            <Plus size={14} />
-            {admin ? "Novo Horário" : "Reunião / Substituta"}
-          </Button>
-        </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PageHeader
+          title="Cronograma"
+          subtitle={!admin ? `${slots.filter((s) => !["REUNIÃO", "AULA_SUBSTITUTA"].includes(s.tipo)).length} aulas regulares` : undefined}
+          actions={
+            <>
+              {admin && (
+                <div className="w-full sm:w-56">
+                  <Select
+                    value={filtroProfId}
+                    onChange={(e) => setFiltroProfId(e.target.value)}
+                    options={[
+                      { value: "", label: "Todos os professores" },
+                      ...professores.map((p) => ({ value: p.id, label: p.nome })),
+                    ]}
+                  />
+                </div>
+              )}
+              <button
+                onClick={carregar}
+                className="rounded-lg p-2 text-[#8ea0b0] transition hover:bg-[#f3f7fa] hover:text-[#45566a]"
+                title="Atualizar"
+              >
+                <RefreshCw size={15} />
+              </button>
+              <Button onClick={abrirNovo} size="md">
+                <Plus size={14} />
+                {admin ? "Novo Horário" : "Reunião / Substituta"}
+              </Button>
+            </>
+          }
+        />
 
         {loading ? (
           <Spinner />
         ) : (
-          <div className="flex-1 overflow-auto p-4 space-y-6 sm:p-6">
+          <div className="flex-1 space-y-6 overflow-auto p-4 sm:p-6">
             {/* Grade semanal (visão professor) */}
             {!admin && (
               <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[#62798a]">
                   Visão Semanal
                 </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                   {DIAS_SEMANA.map((dia) => (
                     <div key={dia}>
-                      <div className="text-center py-2 text-xs font-bold text-white rounded-t-lg bg-gray-800">
+                      <div className="rounded-t-lg bg-[#1f2d3a] py-2 text-center text-xs font-bold text-white">
                         {DIAS_LABELS[dia]}
                       </div>
-                      <div className="border border-slate-200 rounded-b-md min-h-[80px] p-1.5 space-y-1 bg-[#f5f7f9]">
+                      <div className="min-h-[80px] space-y-1 rounded-b-md border border-[#e3ebf1] bg-[#f3f7fa] p-1.5">
                         {(gradeSemanal[dia] ?? []).length === 0 ? (
-                          <p className="text-center text-gray-300 text-xs pt-3">—</p>
+                          <p className="pt-3 text-center text-xs text-[#c3d0da]">—</p>
                         ) : (
                           (gradeSemanal[dia] ?? []).map((s) => (
                             <div
                               key={s.id}
-                              className={`rounded p-1.5 text-xs border ${
+                              className={`rounded border p-1.5 text-xs ${
                                 s.tipo === "REUNIÃO"
-                                  ? "bg-purple-50 border-purple-200 text-purple-800"
+                                  ? "border-purple-200 bg-purple-50 text-purple-800"
                                   : s.tipo === "AULA_SUBSTITUTA"
-                                  ? "bg-amber-50 border-amber-200 text-amber-800"
-                                  : "bg-blue-50 border-blue-200 text-blue-800"
+                                  ? "border-amber-200 bg-amber-50 text-amber-800"
+                                  : "border-[#bcdcec] bg-[#e8f1f6] text-[#1a4b6b]"
                               }`}
                             >
-                              <p className="font-bold truncate">{s.turmaNome}</p>
+                              <p className="truncate font-bold">{s.turmaNome}</p>
                               <p className="text-[10px] opacity-70">{s.horarioInicio}–{s.horarioFim}</p>
                             </div>
                           ))
@@ -339,93 +404,20 @@ export default function CronogramaPage() {
 
             {/* Tabela de grupos */}
             <div>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-[#62798a]">
                 {admin ? "Todos os Horários" : "Lista Completa"}
               </p>
               {grupos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                  <Calendar size={40} className="opacity-20 mb-2" />
-                  <p className="text-sm">Nenhum horário cadastrado.</p>
-                </div>
+                <EmptyState icon={<Calendar size={22} />} title="Nenhum horário cadastrado" />
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 bg-[#f5f7f9]">
-                      {admin && (
-                        <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                          Professor
-                        </th>
-                      )}
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Turma
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Tipo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Dias
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Horário
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
-                        Período
-                      </th>
-                      <th className="px-4 py-3 w-20" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grupos.map((g, i) => (
-                      <tr
-                        key={i}
-                        className={`border-b border-slate-100 hover:bg-[#f4f8fb] transition cursor-pointer ${
-                          g.tipo !== "AULA" ? "bg-purple-50/30" : ""
-                        }`}
-                        onClick={() => abrirEditar(g)}
-                      >
-                        {admin && (
-                          <td className="px-4 py-3 text-gray-700 font-medium">
-                            {g.professorNome}
-                          </td>
-                        )}
-                        <td className="px-4 py-3 text-gray-700">{g.turmaNome}</td>
-                        <td className="px-4 py-3">
-                          <Badge
-                            variant={
-                              g.tipo === "AULA"
-                                ? "blue"
-                                : g.tipo === "REUNIÃO"
-                                ? "purple"
-                                : "amber"
-                            }
-                          >
-                            {TIPO_LABEL[g.tipo as keyof typeof TIPO_LABEL] ?? g.tipo}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                          {g.dias.map((d) => DIAS_LABELS[d] ?? d).join(" · ")}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">
-                          <span className="flex items-center gap-1">
-                            <Clock size={12} className="text-gray-400" />
-                            {g.horarioInicio} – {g.horarioFim}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">
-                          {formatarPeriodo(g)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleExcluir(g); }}
-                            className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Table<GrupoCronograma>
+                  columns={columns}
+                  data={grupos}
+                  rowKey={(g) => g.ids.join("-")}
+                  onRowClick={abrirEditar}
+                  rowClassName={(g) => (g.tipo !== "AULA" ? "bg-purple-50/30" : "")}
+                  pageSize={20}
+                />
               )}
             </div>
           </div>
@@ -473,7 +465,7 @@ export default function CronogramaPage() {
           {isAula ? (
             <>
               <div>
-                <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#45566a]">
                   Dias da Semana
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -481,10 +473,10 @@ export default function CronogramaPage() {
                     <button
                       key={dia}
                       onClick={() => toggleDia(dia)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition ${
                         diasSel.has(dia)
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-300"
+                          ? "border-[#23638c] bg-[#23638c] text-white"
+                          : "border-[#d4e1e9] bg-white text-[#45566a] hover:border-[#23638c]/40"
                       }`}
                     >
                       {DIAS_LABELS[dia]}
@@ -495,39 +487,39 @@ export default function CronogramaPage() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#45566a]">
                     Data início
                   </label>
                   <input
                     type="date"
                     value={dataIni}
                     onChange={(e) => setDataIni(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#45566a]">
                     Data fim
                   </label>
                   <input
                     type="date"
                     value={dataFimForm}
                     onChange={(e) => setDataFimForm(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
                   />
                 </div>
               </div>
             </>
           ) : (
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#45566a]">
                 Data do evento
               </label>
               <input
                 type="date"
                 value={dataEspec}
                 onChange={(e) => setDataEspec(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
               />
             </div>
           )}
@@ -547,7 +539,7 @@ export default function CronogramaPage() {
             />
           </div>
 
-          <p className="text-xs text-gray-400">Formato: HH:mm</p>
+          <p className="text-xs text-[#8ea0b0]">Formato: HH:mm</p>
 
           <Button
             onClick={handleSalvar}

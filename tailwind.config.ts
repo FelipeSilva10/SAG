@@ -9,34 +9,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        sidebar: {
-          bg:     "#0f172a",
-          border: "rgba(255,255,255,0.05)",
-          hover:  "rgba(255,255,255,0.05)",
-          text:   "#94a3b8",
-          label:  "#475569",
+        accent: {
+          DEFAULT: "#23638c",
+          hover: "#1a4b6b",
+          soft: "#e8f1f6",
         },
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "monospace"],
+        sans: ["var(--font-nunito)", "Segoe UI", "system-ui", "sans-serif"],
       },
       borderRadius: {
-        sm:   "6px",
-        DEFAULT: "10px",
-        lg:   "14px",
-        xl:   "18px",
+        sm:   "8px",
+        DEFAULT: "12px",
+        lg:   "16px",
+        xl:   "20px",
         "2xl":"24px",
       },
       boxShadow: {
-        xs:  "0 1px 2px 0 rgba(0,0,0,0.04)",
-        sm:  "0 1px 3px 0 rgba(0,0,0,0.07), 0 1px 2px -1px rgba(0,0,0,0.05)",
-        md:  "0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.05)",
-        lg:  "0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05)",
-        xl:  "0 20px 25px -5px rgba(0,0,0,0.10), 0 8px 10px -6px rgba(0,0,0,0.06)",
-        panel: "0 4px 24px -4px rgba(0,0,0,0.12), 0 2px 6px -2px rgba(0,0,0,0.06)",
-        card:  "0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04)",
-        "card-hover": "0 8px 20px -4px rgba(0,0,0,0.10), 0 2px 6px -2px rgba(0,0,0,0.05)",
+        xs:  "0 1px 2px 0 rgba(15,35,55,0.05)",
+        sm:  "0 2px 8px 0 rgba(15,35,55,0.06)",
+        md:  "0 8px 24px -2px rgba(15,35,55,0.10)",
+        lg:  "0 16px 40px -6px rgba(15,35,55,0.14)",
+        xl:  "0 24px 56px -8px rgba(15,35,55,0.18)",
+        panel: "0 16px 40px -6px rgba(15,35,55,0.14)",
+        card:  "0 2px 8px 0 rgba(15,35,55,0.06)",
+        "card-hover": "0 8px 24px -2px rgba(15,35,55,0.10)",
       },
       animation: {
         "slide-in-right": "slideInRight 180ms cubic-bezier(0.16, 1, 0.3, 1)",
@@ -77,9 +74,6 @@ const config: Config = {
       },
       spacing: {
         "dvh": "100dvh",
-      },
-      screens: {
-        xs: "375px",
       },
     },
   },

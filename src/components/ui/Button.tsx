@@ -22,17 +22,17 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const base = [
-    "inline-flex items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap",
+    "inline-flex items-center justify-center gap-2 rounded font-bold whitespace-nowrap",
     "transition duration-150 active:scale-[0.98]",
     "disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100",
     "select-none",
   ].join(" ");
 
   const variants = {
-    primary:   "bg-[#285a82] hover:bg-[#204967] text-white shadow-sm focus-visible:ring-[#285a82]",
-    secondary: "border border-slate-300 bg-white hover:bg-[#eef4f8] text-slate-700 focus-visible:ring-[#285a82]",
+    primary:   "bg-[#23638c] hover:bg-[#1a4b6b] text-white shadow-sm focus-visible:ring-[#23638c]",
+    secondary: "border border-[#d4e1e9] bg-white hover:bg-[#e8f1f6] text-[#1f2d3a] focus-visible:ring-[#23638c]",
     danger:    "bg-red-600 hover:bg-red-700 text-white shadow-sm focus-visible:ring-red-500",
-    ghost:     "bg-transparent hover:bg-slate-100 text-slate-600 focus-visible:ring-[#285a82]",
+    ghost:     "bg-transparent hover:bg-[#f3f7fa] text-[#45566a] focus-visible:ring-[#23638c]",
     purple:    "bg-violet-600 hover:bg-violet-700 text-white shadow-sm focus-visible:ring-violet-500",
     success:   "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm focus-visible:ring-emerald-500",
   };

@@ -1,11 +1,23 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Trash2, Pencil, Users, School, UserRound, CalendarDays, SearchX } from "lucide-react";
+import { Plus, Trash2, Pencil, Users, School, UserRound, CalendarDays, SearchX } from "lucide-react";
 import { useTurmas } from "@/hooks/useTurmas";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
-import { Badge, Button, EmptyState, Input, Select, SidePanel, Spinner } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Input,
+  Select,
+  SidePanel,
+  PageHeader,
+  StatCard,
+  Table,
+  type Column,
+  useConfirmDialog,
+} from "@/components/ui";
 import type { Turma } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -24,6 +36,7 @@ export default function TurmasPage() {
   const { turmas, loading, fetchTurmas, criar, atualizar, excluir } = useTurmas();
   const { escolas } = useEscolas(); // Reutilizando as escolas para o select
   const { isAdmin } = useSessionStore();
+  const confirm = useConfirmDialog();
   const admin = isAdmin();
 
   const [busca, setBusca] = useState("");
@@ -135,61 +148,123 @@ export default function TurmasPage() {
         toast.success("Turma atualizada!");
       }
       fecharPanel();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar.");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Erro ao salvar.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleExcluir(turma: Turma) {
-    if (!confirm(`Excluir a turma "${turma.nome}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir turma",
+      description: `Excluir a turma "${turma.nome}"?`,
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     setDeleting(turma.id);
     try {
       await excluir(turma.id);
       toast.success("Turma removida.");
       if (editTarget?.id === turma.id) fecharPanel();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir turma.");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Erro ao excluir turma.");
     } finally {
       setDeleting(null);
     }
   }
 
-  return (
-    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#285a82]">Administração escolar</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">Turmas</h1>
-          <p className="mt-2 max-w-xl text-sm text-slate-500">
-            Organize as turmas por escola, ano letivo e professor responsável.
-            {!admin && " Aqui estão apenas as turmas vinculadas a você."}
-          </p>
-        </div>
-        {admin && (
-          <Button onClick={abrirNova} size="md" className="self-start rounded-md sm:self-auto">
-            <Plus size={16} /> Nova turma
-          </Button>
-        )}
-      </header>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        <SummaryCard label="Total de turmas" value={turmas.length} icon={<Users size={18} />} tone="indigo" />
-        <SummaryCard label="Escolas atendidas" value={escolasComTurma} icon={<School size={18} />} tone="sky" />
-        <SummaryCard label="Sem professor" value={turmasSemProfessor} icon={<UserRound size={18} />} tone={turmasSemProfessor ? "amber" : "green"} />
-      </section>
-
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 p-4 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Lista de turmas</h2>
-              <p className="mt-1 text-xs text-slate-500">
-                {turmasFiltradas.length} resultado{turmasFiltradas.length === 1 ? "" : "s"} encontrado{turmasFiltradas.length === 1 ? "" : "s"}
-              </p>
+  const columns: Column<Turma>[] = [
+    {
+      key: "nome",
+      header: "Turma",
+      render: (turma) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e8f1f6] text-[#23638c]">
+            <Users size={16} />
+          </div>
+          <div>
+            <p className="font-bold text-[#1f2d3a]">{turma.nome}</p>
+            <div className="mt-1 flex items-center gap-1 text-xs text-[#8ea0b0]">
+              <CalendarDays size={12} /> Ano letivo {turma.anoLetivo}
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "escolaNome",
+      header: "Escola",
+      render: (turma) => (
+        <div className="flex items-center gap-2 text-[#45566a]">
+          <School size={15} className="text-[#8ea0b0]" />
+          <span>{turma.escolaNome}</span>
+        </div>
+      ),
+    },
+    {
+      key: "professorNome",
+      header: "Professor responsável",
+      render: (turma) => (
+        <div className="flex items-center gap-2 text-[#45566a]">
+          <UserRound size={15} className="text-[#8ea0b0]" />
+          <span>{turma.professorNome || "Nenhum professor"}</span>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (turma) => (
+        <Badge variant={turma.professorId ? "green" : "amber"} dot>
+          {turma.professorId ? "Atribuída" : "Pendente"}
+        </Badge>
+      ),
+    },
+    ...(admin
+      ? [
+          {
+            key: "acoes",
+            header: "",
+            width: "w-24",
+            render: (turma: Turma) => (
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  onClick={() => abrirDetalhe(turma)}
+                  aria-label={`Editar ${turma.nome}`}
+                  className="rounded-md p-2 text-[#8ea0b0] transition hover:bg-[#e8f1f6] hover:text-[#23638c]"
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleExcluir(turma)}
+                  disabled={deleting === turma.id}
+                  aria-label={`Excluir ${turma.nome}`}
+                  className="rounded-lg p-2 text-[#8ea0b0] transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  return (
+    <div className="flex h-full">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PageHeader
+          title="Turmas"
+          subtitle={admin ? "Organize as turmas por escola, ano letivo e professor responsável." : "Turmas vinculadas a você."}
+          searchValue={busca}
+          onSearchChange={setBusca}
+          searchPlaceholder="Buscar turma, escola ou professor"
+          actions={
+            <>
               {admin && (
                 <div className="w-full sm:w-56">
                   <Select
@@ -203,79 +278,42 @@ export default function TurmasPage() {
                   />
                 </div>
               )}
-              <div className="relative w-full sm:w-72">
-                <Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  placeholder="Buscar turma, escola ou professor"
-                  aria-label="Buscar turmas"
-                  className="h-10 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-[#285a82] focus:ring-2 focus:ring-[#285a82]/15"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+              {admin && (
+                <Button onClick={abrirNova} size="md">
+                  <Plus size={16} /> Nova turma
+                </Button>
+              )}
+            </>
+          }
+        />
 
-        {loading ? (
-          <div className="py-10"><Spinner text="Carregando turmas..." /></div>
-        ) : turmasFiltradas.length === 0 ? (
-          <EmptyState
-            icon={<SearchX size={22} />}
-            title={busca || escolaFiltro ? "Nenhuma turma encontrada" : "Você ainda não tem turmas"}
-            message={busca || escolaFiltro ? "Tente remover os filtros ou buscar por outro termo." : "Cadastre a primeira turma para começar a organizar a operação."}
-            action={admin && !busca && !escolaFiltro ? <Button size="sm" onClick={abrirNova}><Plus size={14} /> Nova turma</Button> : undefined}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[780px] text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-5 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Turma</th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Escola</th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Professor responsável</th>
-                  <th className="px-4 py-3.5 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Status</th>
-                  {admin && <th className="w-24 px-4 py-3.5" aria-label="Ações" />}
-                </tr>
-              </thead>
-              <tbody>
-                {turmasFiltradas.map((turma) => (
-                  <tr
-                    key={turma.id}
-                    onClick={() => abrirDetalhe(turma)}
-                    className={`group cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-[#f4f8fb] ${editTarget?.id === turma.id ? "bg-[#eef4f8]" : ""}`}
-                  >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-[#285a82]"><Users size={16} /></div>
-                        <div>
-                          <p className="font-bold text-slate-800">{turma.nome}</p>
-                          <div className="mt-1 flex items-center gap-1 text-xs text-slate-400"><CalendarDays size={12} /> Ano letivo {turma.anoLetivo}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2 text-slate-600"><School size={15} className="text-slate-400" /><span>{turma.escolaNome}</span></div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2 text-slate-600"><UserRound size={15} className="text-slate-400" /><span>{turma.professorNome || "Nenhum professor"}</span></div>
-                    </td>
-                    <td className="px-4 py-4"><Badge variant={turma.professorId ? "green" : "amber"} dot>{turma.professorId ? "Atribuída" : "Pendente"}</Badge></td>
-                    {admin && (
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-1 opacity-60 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
-                          <button type="button" onClick={() => abrirDetalhe(turma)} aria-label={`Editar ${turma.nome}`} title="Editar turma" className="rounded-md p-2 text-slate-400 transition hover:bg-[#e7eef5] hover:text-[#285a82]"><Pencil size={15} /></button>
-                          <button type="button" onClick={() => handleExcluir(turma)} disabled={deleting === turma.id} aria-label={`Excluir ${turma.nome}`} title="Excluir turma" className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"><Trash2 size={15} /></button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <StatCard label="Total de turmas" value={turmas.length} icon={<Users size={18} />} tone="accent" />
+            <StatCard label="Escolas atendidas" value={escolasComTurma} icon={<School size={18} />} tone="accent" />
+            <StatCard label="Sem professor" value={turmasSemProfessor} icon={<UserRound size={18} />} tone={turmasSemProfessor ? "amber" : "green"} />
           </div>
-        )}
-      </section>
+
+          {turmasFiltradas.length === 0 && !loading ? (
+            <EmptyState
+              icon={<SearchX size={22} />}
+              title={busca || escolaFiltro ? "Nenhuma turma encontrada" : "Você ainda não tem turmas"}
+              message={busca || escolaFiltro ? "Tente remover os filtros ou buscar por outro termo." : "Cadastre a primeira turma para começar a organizar a operação."}
+              action={admin && !busca && !escolaFiltro ? <Button size="sm" onClick={abrirNova}><Plus size={14} /> Nova turma</Button> : undefined}
+            />
+          ) : (
+            <Table<Turma>
+              columns={columns}
+              data={turmasFiltradas}
+              rowKey={(t) => t.id}
+              loading={loading}
+              onRowClick={abrirDetalhe}
+              rowClassName={(t) => (editTarget?.id === t.id ? "bg-[#e8f1f6]" : "")}
+              pageSize={20}
+            />
+          )}
+        </div>
+      </div>
 
       <SidePanel
         title={formMode === "new" ? "Nova turma" : admin ? "Editar turma" : "Detalhes da turma"}
@@ -284,15 +322,15 @@ export default function TurmasPage() {
         onClose={fecharPanel}
         width="w-80 sm:w-[26rem]"
       >
-        <div className="rounded-md border border-[#c9d9e5] bg-[#f2f6f9] px-4 py-3 text-xs leading-relaxed text-[#285a82]">
+        <div className="rounded-md border border-[#d4e1e9] bg-[#f3f7fa] px-4 py-3 text-xs leading-relaxed text-[#1a4b6b]">
           {admin
             ? formMode === "new"
               ? "Defina o professor e o horário para que a turma já seja criada com seu cronograma."
               : "Atualize os vínculos da turma. Os horários podem ser gerenciados no Cronograma."
             : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
         </div>
-        <div className="border-t border-slate-100 pt-4">
-          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Informações básicas</p>
+        <div className="border-t border-[#e3ebf1] pt-4">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-[#62798a]">Informações básicas</p>
           <div className="space-y-4">
             <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
             <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
@@ -310,41 +348,12 @@ export default function TurmasPage() {
           </div>
         </div>
         {admin && (
-          <div className="space-y-3 border-t border-slate-200 pt-5">
+          <div className="space-y-3 border-t border-[#e3ebf1] pt-5">
             <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">{formMode === "new" ? "Criar turma" : "Salvar alterações"}</Button>
             {formMode === "edit" && editTarget && <Button variant="ghost" onClick={() => handleExcluir(editTarget)} loading={deleting === editTarget.id} className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"><Trash2 size={14} /> Excluir turma</Button>}
           </div>
         )}
       </SidePanel>
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  icon,
-  tone,
-}: {
-  label: string;
-  value: number;
-  icon: React.ReactNode;
-  tone: "indigo" | "sky" | "amber" | "green";
-}) {
-  const tones = {
-    indigo: "bg-[#e7eef5] text-[#285a82]",
-    sky: "bg-[#edf3f7] text-[#416d8d]",
-    amber: "bg-[#f5f1e8] text-[#866a35]",
-    green: "bg-[#edf4ef] text-[#487254]",
-  };
-
-  return (
-    <div className="flex items-center gap-4 rounded-lg border border-slate-200 bg-white p-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-md ${tones[tone]}`}>{icon}</div>
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
-      </div>
     </div>
   );
 }

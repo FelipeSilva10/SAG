@@ -37,7 +37,7 @@ export default function Input({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-xs font-semibold text-slate-600 uppercase tracking-wide"
+          className="block text-xs font-bold text-[#45566a] uppercase tracking-wide"
         >
           {label}
         </label>
@@ -45,7 +45,7 @@ export default function Input({
 
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#62798a] pointer-events-none">
             {leftIcon}
           </div>
         )}
@@ -54,13 +54,13 @@ export default function Input({
           aria-invalid={!!error}
           aria-describedby={describedBy}
           className={cn(
-            "h-10 w-full rounded-lg border bg-white py-2.5 text-sm text-slate-900",
-            "placeholder-slate-400 transition-colors duration-150",
-            "focus:outline-none focus:ring-2 focus:ring-[#285a82]/15 focus:border-[#285a82]",
-            "disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed",
+            "h-10 w-full rounded border bg-white py-2.5 text-sm text-[#1f2d3a]",
+            "placeholder-[#8ea0b0] transition-colors duration-150",
+            "focus:outline-none focus:ring-2 focus:ring-[#23638c]/15 focus:border-[#23638c]",
+            "disabled:bg-[#f3f7fa] disabled:text-[#8ea0b0] disabled:cursor-not-allowed",
             error
               ? "border-red-400 focus:ring-red-400 focus:border-red-400"
-              : "border-slate-200 hover:border-slate-300",
+              : "border-[#d4e1e9] hover:border-[#b9cbd7]",
             leftIcon ? "pl-9 pr-3" : "px-3.5",
             rightIcon ? "pr-9" : "",
             className

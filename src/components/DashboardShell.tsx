@@ -68,7 +68,6 @@ export default function DashboardShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const currentSession = sessao ?? initialSession;
   const roles = currentSession.roles;
-  const admin = roles.includes("ADMIN");
 
   useLayoutEffect(() => {
     useSessionStore.getState().setSessao(initialSession);
@@ -98,7 +97,7 @@ export default function DashboardShell({
   });
 
   return (
-    <div className="sag-shell flex h-screen overflow-hidden bg-[#eef1f4] text-slate-900">
+    <div className="sag-shell flex h-screen overflow-hidden bg-[#eef2f7] text-[#1f2d3a]">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-slate-950/40 md:hidden"
@@ -136,9 +135,9 @@ export default function DashboardShell({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 flex-none items-center gap-3 border-b border-slate-200 bg-white px-4 md:px-8">
+        <header className="flex h-16 flex-none items-center gap-3 border-b border-[#e3ebf1] bg-white px-4 md:px-8">
           <button
-            className="flex-none rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 md:hidden"
+            className="flex-none rounded-lg p-2 text-[#62798a] transition-colors hover:bg-[#f3f7fa] hover:text-[#45566a] md:hidden"
             onClick={() => setSidebarOpen(true)}
             aria-label="Abrir menu"
           >
@@ -146,11 +145,11 @@ export default function DashboardShell({
           </button>
 
           <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-            <span className="hidden font-medium text-slate-500 sm:inline">Sistema SAG</span>
+            <span className="hidden font-semibold text-[#62798a] sm:inline">Sistema SAG</span>
             {currentItem && (
               <>
-                <ChevronRight size={15} className="hidden flex-none text-slate-300 sm:inline" />
-                <span className="truncate font-medium text-slate-700">
+                <ChevronRight size={15} className="hidden flex-none text-[#d4e1e9] sm:inline" />
+                <span className="truncate font-semibold text-[#45566a]">
                   {currentItem.label}
                 </span>
               </>
@@ -158,21 +157,21 @@ export default function DashboardShell({
           </div>
 
           <div className="hidden items-center gap-3 sm:flex">
-            <div className="hidden items-center gap-2 text-xs text-slate-500 lg:flex">
+            <div className="hidden items-center gap-2 text-xs text-[#62798a] lg:flex">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Ambiente ativo
             </div>
-            <div className="flex items-center gap-2.5 border-l border-slate-200 pl-3">
+            <div className="flex items-center gap-2.5 border-l border-[#e3ebf1] pl-3">
               <Avatar nome={currentSession.nome} />
               <div className="hidden min-w-0 lg:block">
-                <p className="max-w-[150px] truncate text-xs font-bold text-slate-800">{currentSession.nome}</p>
-                <p className="text-[11px] text-slate-400">{roleLabel(roles)}</p>
+                <p className="max-w-[150px] truncate text-xs font-bold text-[#1f2d3a]">{currentSession.nome}</p>
+                <p className="text-[11px] text-[#8ea0b0]">{roleLabel(roles)}</p>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="sag-main flex-1 overflow-auto bg-[#eef1f4]">
+        <main className="sag-main flex-1 overflow-auto bg-[#eef2f7]">
           {children}
         </main>
       </div>
@@ -195,7 +194,6 @@ function SidebarContent({
   onLogout: () => void;
   onClose?: () => void;
 }) {
-  const admin = roles.includes("ADMIN");
   return (
     <>
       <div className="flex items-center justify-between border-b border-[#365570] px-5 py-5">
@@ -238,7 +236,7 @@ function SidebarContent({
           onNavigate={onNavigate}
         />
         <NavGroup
-          label={admin ? "Operação" : "Rotina"}
+          label="Sala de Aula"
           items={getVisibleItems(NAV_MODULOS, roles)}
           pathname={pathname}
           onNavigate={onNavigate}
@@ -318,15 +316,15 @@ function NavButton({
       className={cn(
         "group flex w-full items-center gap-3 rounded-md border-l-2 border-transparent px-3 py-2.5 text-left text-sm transition-colors",
         active
-          ? "border-l-sky-200 bg-white/10 text-white"
+          ? "border-l-[#7fb3cf] bg-white/10 text-white"
           : "text-slate-300 hover:bg-[#1d354d] hover:text-white"
       )}
     >
-      <span className={cn("flex h-6 w-6 flex-none items-center justify-center transition-colors", active ? "text-sky-100" : "text-slate-400 group-hover:text-white")}>
+      <span className={cn("flex h-6 w-6 flex-none items-center justify-center transition-colors", active ? "text-[#a9d0e3]" : "text-slate-400 group-hover:text-white")}>
         {item.icon}
       </span>
-      <span className="truncate font-medium">{item.label}</span>
-      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-sky-200" />}
+      <span className="truncate font-semibold">{item.label}</span>
+      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#a9d0e3]" />}
     </button>
   );
 }
@@ -341,7 +339,7 @@ function Avatar({ nome }: { nome: string }) {
     .toUpperCase() || "S";
 
   return (
-    <div aria-hidden="true" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#dce8f2] text-[11px] font-bold text-[#285a82]">
+    <div aria-hidden="true" className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#e8f1f6] text-[11px] font-bold text-[#23638c]">
       {initials}
     </div>
   );

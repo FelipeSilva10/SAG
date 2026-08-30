@@ -1,10 +1,21 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Search, Plus, Trash2, Pencil, Users } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Trash2, Pencil, Users } from "lucide-react";
 import { useProfessores } from "@/hooks/useProfessores";
 import { useSessionStore } from "@/store/session";
-import { Badge, Button, Input, SidePanel, Spinner } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Input,
+  SidePanel,
+  Spinner,
+  PageHeader,
+  Table,
+  type Column,
+  EmptyState,
+  useConfirmDialog,
+} from "@/components/ui";
 import type { Professor, Turma } from "@/lib/types";
 import toast from "react-hot-toast";
 
@@ -13,6 +24,8 @@ type FormMode = "new" | "edit";
 export default function ProfessoresPage() {
   const { professores, loading, criar, atualizar, excluir } = useProfessores();
   const { isAdmin } = useSessionStore();
+  const confirm = useConfirmDialog();
+  const admin = isAdmin();
 
   const [busca, setBusca] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
@@ -87,122 +100,115 @@ export default function ProfessoresPage() {
         toast.success("Professor atualizado!");
       }
       setPanelOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar.");
+    } catch (err: unknown) {
+      toast.error((err as Error).message || "Erro ao salvar.");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleExcluir(prof: Professor) {
-    if (!confirm(`Excluir o professor "${prof.nome}"? Esta ação removerá os vínculos com suas turmas.`)) return;
+    const ok = await confirm({
+      title: "Excluir professor",
+      description: `Excluir o professor "${prof.nome}"? Esta ação removerá os vínculos com suas turmas.`,
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await excluir(prof.id);
       toast.success("Professor removido.");
       if (editTarget?.id === prof.id) setPanelOpen(false);
-    } catch (err: any) {
+    } catch {
       toast.error("Erro ao excluir professor.");
     }
   }
 
+  const columns: Column<Professor>[] = [
+    {
+      key: "nome",
+      header: "Nome",
+      render: (p) => <span className="font-semibold text-[#1f2d3a]">{p.nome}</span>,
+    },
+    { key: "email", header: "E-mail" },
+    ...(admin
+      ? [
+          {
+            key: "situacao",
+            header: "Situação",
+            render: (p: Professor) => (
+              <Badge variant={p.accessStatus === "ATIVO" ? "green" : "red"} dot>
+                {p.mustChangeSenha ? "Troca pendente" : p.accessStatus === "ATIVO" ? "Acesso ativo" : "Acesso suspenso"}
+              </Badge>
+            ),
+          },
+          {
+            key: "acoes",
+            header: "",
+            width: "w-24",
+            render: (p: Professor) => (
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button onClick={() => abrirDetalhe(p)} className="rounded p-1.5 text-[#8ea0b0] transition hover:bg-[#f3f7fa] hover:text-[#23638c]" aria-label="Editar professor">
+                  <Pencil size={13} />
+                </button>
+                <button onClick={() => handleExcluir(p)} className="rounded p-1.5 text-[#8ea0b0] transition hover:bg-red-50 hover:text-red-600" aria-label="Excluir professor">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="flex h-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
-          <h1 className="text-lg font-bold text-gray-900">Professores</h1>
-          
-          <div className="hidden sm:block sm:flex-1" />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PageHeader
+          title="Professores"
+          searchValue={busca}
+          onSearchChange={setBusca}
+          searchPlaceholder="Buscar por nome ou e-mail…"
+          actions={
+            admin && (
+              <Button onClick={abrirNovo} size="md">
+                <Plus size={14} /> Novo Professor
+              </Button>
+            )
+          }
+        />
 
-          <div className="relative w-full sm:w-auto">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-slate-300 rounded-md sm:w-64 focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 bg-white"
-            />
-          </div>
-
-          {isAdmin() && (
-            <Button onClick={abrirNovo} size="md" className="w-full sm:w-auto">
-              <Plus size={14} /> Novo Professor
-            </Button>
-          )}
-        </div>
-
-        {/* Tabela */}
-        <div className="flex-1 overflow-auto">
-          {loading ? (
-            <Spinner />
-          ) : professoresFiltrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-              <Users size={48} className="opacity-20 mb-2" />
-              <p className="text-sm">Nenhum professor encontrado.</p>
-            </div>
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
+          {professoresFiltrados.length === 0 && !loading ? (
+            <EmptyState icon={<Users size={22} />} title="Nenhum professor encontrado" />
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-[#f5f7f9]">
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Nome</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">E-mail</th>
-                  {isAdmin() && <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Situação</th>}
-                  {isAdmin() && <th className="px-4 py-3 w-24" />}
-                </tr>
-              </thead>
-              <tbody>
-                {professoresFiltrados.map((prof) => (
-                  <tr
-                    key={prof.id}
-                    onClick={() => isAdmin() ? abrirDetalhe(prof) : undefined}
-                    className={`border-b border-gray-100 transition 
-                      ${isAdmin() ? "cursor-pointer hover:bg-[#f4f8fb]" : ""}
-                      ${editTarget?.id === prof.id ? "bg-blue-50" : ""}`}
-                  >
-                    <td className="px-6 py-3 font-medium text-gray-900">{prof.nome}</td>
-                    <td className="px-4 py-3 text-gray-600">{prof.email}</td>
-                    {isAdmin() && (
-                      <td className="px-4 py-3">
-                        <Badge variant={prof.accessStatus === "ATIVO" ? "green" : "red"} dot>
-                          {prof.mustChangeSenha ? "Troca pendente" : prof.accessStatus === "ATIVO" ? "Acesso ativo" : "Acesso suspenso"}
-                        </Badge>
-                      </td>
-                    )}
-                    {isAdmin() && (
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={() => abrirDetalhe(prof)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600">
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => handleExcluir(prof)} className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Table<Professor>
+              columns={columns}
+              data={professoresFiltrados}
+              rowKey={(p) => p.id}
+              loading={loading}
+              onRowClick={admin ? abrirDetalhe : undefined}
+              pageSize={20}
+            />
           )}
         </div>
       </div>
 
       {/* Painel Lateral */}
-      <SidePanel 
-        title={formMode === "new" ? "Novo Professor" : `Editar: ${editTarget?.nome ?? ""}`} 
-        open={panelOpen} 
+      <SidePanel
+        title={formMode === "new" ? "Novo Professor" : `Editar: ${editTarget?.nome ?? ""}`}
+        open={panelOpen}
         onClose={() => setPanelOpen(false)}
       >
         <div className="space-y-4">
-          <Input label="Nome Completo" value={nome} onChange={(e) => setNome(e.target.value)} disabled={!isAdmin()} />
-          <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!isAdmin() || formMode === "edit"} />
-          
-          {isAdmin() && (
+          <Input label="Nome Completo" value={nome} onChange={(e) => setNome(e.target.value)} disabled={!admin} />
+          <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!admin || formMode === "edit"} />
+
+          {admin && (
           <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} hint={formMode === "edit" ? "A senha atual nunca é exibida." : undefined} />
           )}
 
-          {isAdmin() && (
+          {admin && (
             <div className="pt-2">
               <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">
                 {formMode === "new" ? "Cadastrar Professor" : "Salvar Alterações"}
@@ -212,29 +218,29 @@ export default function ProfessoresPage() {
 
           {/* Subtabela de Turmas Atribuídas (Aparece apenas na Edição) */}
           {formMode === "edit" && (
-            <div className="pt-6 border-t border-gray-100 mt-4">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">Turmas deste Professor</h3>
-              
+            <div className="mt-4 border-t border-[#e3ebf1] pt-6">
+              <h3 className="mb-3 text-sm font-bold text-[#1f2d3a]">Turmas deste Professor</h3>
+
               {loadingTurmas ? (
-                <div className="flex justify-center py-4"><Spinner /></div>
+                <div className="flex justify-center py-4"><Spinner size="sm" /></div>
               ) : turmasAtribuidas.length === 0 ? (
-                <div className="text-xs text-gray-400 p-4 border border-gray-100 rounded-lg text-center bg-gray-50">
+                <div className="rounded-lg border border-[#e3ebf1] bg-[#f3f7fa] p-4 text-center text-xs text-[#8ea0b0]">
                   Sem turmas atribuídas no momento.
                 </div>
               ) : (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-hidden rounded-lg border border-[#e3ebf1]">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="border-b border-[#e3ebf1] bg-[#f3f7fa]">
                       <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-600">Turma</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-600">Escola</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#62798a]">Turma</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#62798a]">Escola</th>
                       </tr>
                     </thead>
                     <tbody>
                       {turmasAtribuidas.map((t) => (
-                        <tr key={t.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                          <td className="px-3 py-2 font-medium text-gray-800">{t.nome}</td>
-                          <td className="px-3 py-2 text-gray-500">{t.escolaNome}</td>
+                        <tr key={t.id} className="border-b border-[#eef2f7] last:border-0 hover:bg-[#f3f7fa]">
+                          <td className="px-3 py-2 font-semibold text-[#1f2d3a]">{t.nome}</td>
+                          <td className="px-3 py-2 text-[#62798a]">{t.escolaNome}</td>
                         </tr>
                       ))}
                     </tbody>

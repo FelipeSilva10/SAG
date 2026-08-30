@@ -67,22 +67,21 @@ export function SidePanel({
         tabIndex={-1}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex flex-none flex-col overflow-hidden",
-          "max-w-full border-l border-slate-200 bg-white",
-          "shadow-xl shadow-slate-900/10 outline-none",
+          "max-w-full border-l border-[#d4e1e9] bg-white",
+          "shadow-xl outline-none",
           "md:relative md:inset-auto md:z-auto",
-          "dark:border-slate-800 dark:bg-slate-900",
           width
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+        <div className="flex items-start justify-between border-b border-[#e3ebf1] px-5 py-4">
           <div className="min-w-0 pr-3">
-            <h3 className="text-sm font-bold leading-tight text-slate-900 dark:text-slate-100">
+            <h3 className="text-sm font-bold leading-tight text-[#1f2d3a]">
               {title}
             </h3>
 
             {subtitle && (
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-[#62798a]">
                 {subtitle}
               </p>
             )}
@@ -94,9 +93,8 @@ export function SidePanel({
             aria-label="Fechar painel"
             className={cn(
               "flex-none rounded-lg p-1.5 transition-colors",
-              "text-slate-400 hover:bg-slate-100 hover:text-slate-600",
-              "focus:outline-none focus:ring-2 focus:ring-indigo-500/30",
-              "dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              "text-[#8ea0b0] hover:bg-[#f3f7fa] hover:text-[#45566a]",
+              "focus:outline-none focus:ring-2 focus:ring-[#23638c]/30"
             )}
           >
             <X size={15} aria-hidden="true" />

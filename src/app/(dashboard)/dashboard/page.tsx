@@ -6,7 +6,7 @@ import {
   ArrowRight, BookOpen, BookUser, CalendarDays, CheckCircle2,
   ClipboardCheck, Clock, GraduationCap, Plus, School, Users,
 } from "lucide-react";
-import { Button, Spinner } from "@/components/ui";
+import { Button, Spinner, StatCard } from "@/components/ui";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useTurmas } from "@/hooks/useTurmas";
@@ -96,7 +96,7 @@ export default function DashboardPage() {
       href: "/escolas",
       icon: <School size={18} />,
       metric: `${escolas.length} cadastrada${escolas.length === 1 ? "" : "s"}`,
-      accent: "text-[#285a82] bg-[#eef4f8] border-[#c9d9e5]",
+      accent: "text-[#23638c] bg-[#e8f1f6] border-[#d4e1e9]",
     },
     {
       title: "Turmas",
@@ -261,7 +261,7 @@ export default function DashboardPage() {
               <CalendarDays size={14} />
               <span className="capitalize">{dateLabel}</span>
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#285a82]">Dashboard</p>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#23638c]">Dashboard</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               {admin ? "Visão geral" : `Olá, ${sessao?.nome?.split(" ")[0] ?? "professor"}`}
             </h1>
@@ -300,25 +300,25 @@ export default function DashboardPage() {
             <StatCard
               label="Escolas"
               value={escolas.length}
-              detail={`${escolas.filter((e) => e.tipo === "PUBLICA").length} públicas, ${escolas.filter((e) => e.tipo === "PRIVADA").length} privadas`}
+              hint={`${escolas.filter((e) => e.tipo === "PUBLICA").length} públicas, ${escolas.filter((e) => e.tipo === "PRIVADA").length} privadas`}
               icon={<School size={18} />}
             />
             <StatCard
               label="Turmas"
               value={turmas.length}
-              detail={admin ? `${turmasSemProfessor} sem professor` : "Turmas atribuídas"}
+              hint={admin ? `${turmasSemProfessor} sem professor` : "Turmas atribuídas"}
               icon={<Users size={18} />}
             />
             <StatCard
               label="Alunos"
               value={alunos.length}
-              detail={`${alunosPorTurma} por turma em média`}
+              hint={`${alunosPorTurma} por turma em média`}
               icon={<GraduationCap size={18} />}
             />
             <StatCard
               label={admin ? "Professores" : "Rotinas"}
               value={admin ? professores.length : 3}
-              detail={admin ? "Docentes cadastrados" : "Chamada, diário e horas"}
+              hint={admin ? "Docentes cadastrados" : "Chamada, diário e horas"}
               icon={admin ? <BookUser size={18} /> : <CheckCircle2 size={18} />}
             />
           </section>
@@ -395,33 +395,6 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  detail,
-  icon,
-}: {
-  label: string;
-  value: number;
-  detail: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-slate-950">{value}</p>
-          <p className="mt-1 text-xs text-slate-500">{detail}</p>
-        </div>
-        <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-[#285a82]">
-          {icon}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ModuleCard({
   item,
   onClick,
@@ -433,7 +406,7 @@ function ModuleCard({
     <button
       type="button"
       onClick={onClick}
-      className="group rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-[#9eb7cb] hover:bg-[#f8fafc]"
+      className="group rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-[#a9c4d4] hover:bg-[#f8fafc]"
     >
       <div className="flex items-start gap-3">
         <div className={`flex h-9 w-9 flex-none items-center justify-center rounded-md border ${item.accent}`}>
@@ -442,7 +415,7 @@ function ModuleCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
             <p className="font-bold text-slate-900">{item.title}</p>
-            <ArrowRight size={15} className="flex-none text-slate-300 transition-colors group-hover:text-[#285a82]" />
+            <ArrowRight size={15} className="flex-none text-slate-300 transition-colors group-hover:text-[#23638c]" />
           </div>
           <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.description}</p>
           {item.metric && (

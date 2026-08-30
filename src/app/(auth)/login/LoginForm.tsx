@@ -43,11 +43,11 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#eef1f4] lg:flex">
+    <div className="min-h-dvh bg-[#eef2f7] lg:flex">
       <aside className="hidden min-h-dvh bg-[#233f5c] text-white lg:flex lg:w-[390px] lg:flex-col">
         <div className="border-b border-[#365570] px-10 py-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#e7eef5] text-xs font-black text-[#233f5c]">SAG</div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-md bg-[#e8f1f6] text-xs font-black text-[#233f5c]">SAG</div>
             <div>
               <p className="text-base font-bold">SAG</p>
               <p className="text-xs text-slate-300">Sistema de Acompanhamento e Gestão</p>
@@ -79,7 +79,7 @@ export default function LoginForm() {
 
           <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#285a82]">Área restrita</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#23638c]">Área restrita</p>
               <h2 className="mt-2 text-2xl font-bold text-slate-900">Acesso ao sistema</h2>
               <p className="mt-2 text-sm text-slate-500">Informe seus dados para continuar.</p>
             </div>
@@ -89,7 +89,7 @@ export default function LoginForm() {
                 <label htmlFor="login" className="block text-sm font-semibold text-slate-700">Usuário ou e-mail</label>
                 <div className="relative">
                   <Mail size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input id="login" type="text" value={login} onChange={(event) => setLogin(event.target.value)} placeholder="Digite seu usuário ou e-mail" autoComplete="username" autoFocus className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#285a82] focus:ring-2 focus:ring-[#285a82]/15" />
+                  <input id="login" type="text" value={login} onChange={(event) => setLogin(event.target.value)} placeholder="Digite seu usuário ou e-mail" autoComplete="username" autoFocus className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#23638c] focus:ring-2 focus:ring-[#23638c]/15" />
                 </div>
               </div>
 
@@ -97,14 +97,14 @@ export default function LoginForm() {
                 <label htmlFor="senha" className="block text-sm font-semibold text-slate-700">Senha</label>
                 <div className="relative">
                   <LockKeyhole size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input id="senha" type={senhaVisivel ? "text" : "password"} value={senha} onChange={(event) => setSenha(event.target.value)} placeholder="Digite sua senha" autoComplete="current-password" className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#285a82] focus:ring-2 focus:ring-[#285a82]/15" />
+                  <input id="senha" type={senhaVisivel ? "text" : "password"} value={senha} onChange={(event) => setSenha(event.target.value)} placeholder="Digite sua senha" autoComplete="current-password" className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-11 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#23638c] focus:ring-2 focus:ring-[#23638c]/15" />
                   <button type="button" onClick={() => setSenhaVisivel((visible) => !visible)} aria-label={senhaVisivel ? "Ocultar senha" : "Mostrar senha"} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">
                     {senhaVisivel ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
 
-              <button type="submit" disabled={loading || !login.trim() || !senha} className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#285a82] px-5 text-sm font-bold text-white transition hover:bg-[#204967] active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300">
+              <button type="submit" disabled={loading || !login.trim() || !senha} className="flex h-11 w-full items-center justify-center gap-2 rounded-md bg-[#23638c] px-5 text-sm font-bold text-white transition hover:bg-[#1a4b6b] active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-300">
                 {loading ? <><Loader2 size={16} className="animate-spin" /> Verificando...</> : <>Entrar <ArrowRight size={16} /></>}
               </button>
             </form>

@@ -2,11 +2,20 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
-  CheckCircle, XCircle, RefreshCw, Plus, ChevronRight, X,
-  Clock, Users, TrendingUp, AlertCircle,
+  CheckCircle, XCircle, RefreshCw, Plus, X,
+  Users, AlertCircle,
 } from "lucide-react";
 import { useSessionStore } from "@/store/session";
-import { Button, Select, Spinner, Badge } from "@/components/ui";
+import {
+  Button,
+  Select,
+  Spinner,
+  Badge,
+  Table,
+  type Column,
+  EmptyState,
+  useConfirmDialog,
+} from "@/components/ui";
 import toast from "react-hot-toast";
 import type { Chamada, ChamadaPresenca, ResumoTurma, Turma, CronogramaAula } from "@/lib/types";
 
@@ -18,6 +27,11 @@ interface PresencaLocal {
   alunoNome: string;
   presente: boolean;
 }
+
+const MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 function diaSemanaPortugues(date: Date): string {
   const dias = ["DOMINGO", "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO"];
@@ -31,6 +45,12 @@ function formatarData(iso: string): string {
 
 function hoje(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function presencaTone(pct: number): "green" | "amber" | "red" {
+  if (pct >= 75) return "green";
+  if (pct >= 50) return "amber";
+  return "red";
 }
 
 // ── Componente principal ─────────────────────────────────────────────────────
@@ -209,6 +229,10 @@ export default function ChamadaPage() {
     } catch { toast.error("Erro ao carregar presenças."); }
   }
 
+  function marcarTodosDetalhe(presente: boolean) {
+    setPresencasDetalhe((prev) => prev.map((p) => ({ ...p, presente })));
+  }
+
   async function salvarEdicao() {
     if (!chamadaDetalhe) return;
     setSavingDetalhe(true);
@@ -228,8 +252,16 @@ export default function ChamadaPage() {
     finally { setSavingDetalhe(false); }
   }
 
+  const confirm = useConfirmDialog();
+
   async function excluirChamada(chamada: Chamada) {
-    if (!confirm("Excluir esta chamada?")) return;
+    const ok = await confirm({
+      title: "Excluir chamada",
+      description: `Excluir a chamada de ${formatarData(chamada.dataAula)} — ${chamada.turmaNome}?`,
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await fetch(`/api/chamada/${chamada.id}`, { method: "DELETE" });
       toast.success("Chamada excluída.");
@@ -242,30 +274,28 @@ export default function ChamadaPage() {
   const ausentes = presencas.length - presentes;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
       {/* Sub-header com tabs */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3 bg-white border-b border-slate-200 sm:px-6">
-        <h1 className="mr-2 text-lg font-bold text-gray-900 sm:mr-4">Chamada</h1>
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#e3ebf1] bg-white px-4 py-3 sm:px-6">
+        <h1 className="mr-2 text-lg font-extrabold text-[#1f2d3a] sm:mr-4">Chamada</h1>
 
         {(["PREVIEW", "HISTORICO"] as Tela[]).map((t) => (
-          <button
+          <Button
             key={t}
             onClick={() => setTela(t)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-              tela === t
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            size="sm"
+            variant={tela === t ? "primary" : "secondary"}
           >
             {t === "PREVIEW" ? "Turmas" : "Histórico"}
-          </button>
+          </Button>
         ))}
 
         <div className="hidden sm:block sm:flex-1" />
 
         <button
           onClick={() => { if (tela === "PREVIEW") carregarPreview(); else carregarHistorico(); }}
-          className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+          className="rounded-lg p-2 text-[#8ea0b0] transition hover:bg-[#f3f7fa] hover:text-[#45566a]"
+          aria-label="Atualizar"
         >
           <RefreshCw size={15} />
         </button>
@@ -282,7 +312,6 @@ export default function ChamadaPage() {
         <PreviewTela
           resumos={resumos}
           slotAtual={slotAtual}
-          turmas={turmas}
           onIniciarAtiva={() => {
             if (slotAtual) abrirFormManual(slotAtual.turmaId, hoje());
           }}
@@ -319,6 +348,7 @@ export default function ChamadaPage() {
               prev.map((p) => p.id === id ? { ...p, presente: !p.presente } : p)
             );
           }}
+          onMarcarTodosDetalhe={marcarTodosDetalhe}
           onSalvarEdicao={salvarEdicao}
           savingDetalhe={savingDetalhe}
           onExcluir={excluirChamada}
@@ -332,65 +362,60 @@ export default function ChamadaPage() {
 // ── Sub-componentes ──────────────────────────────────────────────────────────
 
 function PreviewTela({
-  resumos, slotAtual, turmas, onIniciarAtiva, onIniciarTurma,
+  resumos, slotAtual, onIniciarAtiva, onIniciarTurma,
 }: {
   resumos: ResumoTurma[];
   slotAtual: CronogramaAula | null;
-  turmas: Turma[];
   onIniciarAtiva: () => void;
   onIniciarTurma: (id: string) => void;
 }) {
   return (
-    <div className="flex-1 overflow-auto p-4 space-y-6 sm:p-6">
+    <div className="flex-1 space-y-6 overflow-auto p-4 sm:p-6">
       {/* Banner aula ativa */}
       {slotAtual && (
-        <div className="flex flex-col gap-3 rounded-lg border border-green-200 bg-green-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
             <div>
-              <p className="font-bold text-green-800 text-sm">Aula em andamento</p>
-              <p className="text-green-700 text-xs">
+              <p className="text-sm font-bold text-emerald-800">Aula em andamento</p>
+              <p className="text-xs text-emerald-700">
                 {slotAtual.turmaNome} · {slotAtual.horarioInicio}–{slotAtual.horarioFim}
               </p>
             </div>
           </div>
-          <Button onClick={onIniciarAtiva} size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white">
+          <Button onClick={onIniciarAtiva} size="sm" variant="success">
             Iniciar Chamada
           </Button>
         </div>
       )}
 
       {resumos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-          <Users size={40} className="opacity-20 mb-2" />
-          <p className="text-sm">Nenhuma turma atribuída.</p>
-        </div>
+        <EmptyState icon={<Users size={22} />} title="Nenhuma turma atribuída" />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {resumos.map((r) => {
             const pct = r.mediaPresenca ?? 0;
             return (
               <div key={r.turmaId}
-                className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm space-y-3">
+                className="space-y-3 rounded-lg border border-[#e3ebf1] bg-white p-5 shadow-card">
                 <div>
-                  <p className="font-bold text-gray-900">{r.turmaNome}</p>
-                  <p className="text-xs text-gray-500">{r.escolaNome}</p>
+                  <p className="font-bold text-[#1f2d3a]">{r.turmaNome}</p>
+                  <p className="text-xs text-[#8ea0b0]">{r.escolaNome}</p>
                 </div>
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-gray-600">
+                  <div className="flex justify-between text-xs text-[#62798a]">
                     <span>{r.totalChamadas} chamadas</span>
-                    <span className="font-semibold">{Math.round(pct)}% presença</span>
+                    <span className="font-bold">{Math.round(pct)}% presença</span>
                   </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div className="h-1.5 w-full rounded-full bg-[#eef2f7]">
                     <div
                       className={`h-1.5 rounded-full ${
-                        pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"
+                        pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"
                       }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-[#8ea0b0]">
                     Última: {r.ultimaChamada ? formatarData(r.ultimaChamada) : "Nenhuma ainda"}
                   </p>
                 </div>
@@ -410,28 +435,48 @@ function PreviewTela({
   );
 }
 
+interface FormTelaProps {
+  turmas: Turma[];
+  turmaId: string;
+  setTurmaId: (v: string) => void;
+  data: string;
+  setData: (v: string) => void;
+  onCarregar: () => void;
+  loadingAlunos: boolean;
+  presencas: PresencaLocal[];
+  onToggle: (alunoId: string) => void;
+  onTodos: () => void;
+  onNenhum: () => void;
+  slotForm: CronogramaAula | null;
+  presentes: number;
+  ausentes: number;
+  onSalvar: () => void;
+  saving: boolean;
+  onVoltar: () => void;
+}
+
 function FormTela({
   turmas, turmaId, setTurmaId, data, setData,
   onCarregar, loadingAlunos, presencas, onToggle,
   onTodos, onNenhum, slotForm, presentes, ausentes,
   onSalvar, saving, onVoltar,
-}: any) {
+}: FormTelaProps) {
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-1 flex-col overflow-hidden">
       {/* Sub-header */}
-      <div className="flex items-center gap-3 px-6 py-3 bg-[#f5f7f9] border-b border-slate-200">
+      <div className="flex items-center gap-3 border-b border-[#e3ebf1] bg-[#f3f7fa] px-6 py-3">
         <button
           onClick={onVoltar}
-          className="text-blue-600 text-sm font-medium hover:underline flex items-center gap-1"
+          className="flex items-center gap-1 text-sm font-bold text-[#23638c] hover:underline"
         >
           ← Voltar
         </button>
-        <span className="text-gray-400">/</span>
-        <span className="text-sm font-medium text-gray-700">Nova Chamada</span>
+        <span className="text-[#c3d0da]">/</span>
+        <span className="text-sm font-semibold text-[#45566a]">Nova Chamada</span>
       </div>
 
       {/* Seletor */}
-      <div className="flex flex-col gap-3 px-4 py-3 bg-[#f5f7f9] border-b border-slate-200 sm:flex-row sm:items-end sm:flex-wrap sm:px-6">
+      <div className="flex flex-col gap-3 border-b border-[#e3ebf1] bg-[#f3f7fa] px-4 py-3 sm:flex-row sm:flex-wrap sm:items-end sm:px-6">
         <div className="w-full sm:w-56">
           <Select
             label="Turma"
@@ -439,19 +484,19 @@ function FormTela({
             onChange={(e) => setTurmaId(e.target.value)}
             options={[
               { value: "", label: "Selecione..." },
-              ...turmas.map((t: Turma) => ({ value: t.id, label: t.nome })),
+              ...turmas.map((t) => ({ value: t.id, label: t.nome })),
             ]}
           />
         </div>
         <div className="w-full sm:w-auto">
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+          <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#45566a]">
             Data
           </label>
           <input
             type="date"
             value={data}
             onChange={(e) => setData(e.target.value)}
-            className="h-10 w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 sm:w-auto"
+            className="h-10 w-full rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20 sm:w-auto"
           />
         </div>
         <Button onClick={onCarregar} variant="secondary" disabled={!turmaId || !data} className="w-full sm:w-auto">
@@ -459,9 +504,7 @@ function FormTela({
         </Button>
 
         {slotForm && (
-          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-            ✓ {slotForm.horarioInicio}–{slotForm.horarioFim}
-          </span>
+          <Badge variant="green">✓ {slotForm.horarioInicio}–{slotForm.horarioFim}</Badge>
         )}
       </div>
 
@@ -470,37 +513,34 @@ function FormTela({
         {loadingAlunos ? (
           <Spinner />
         ) : presencas.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <Users size={40} className="opacity-20 mb-2" />
-            <p className="text-sm">Selecione uma turma e clique em Carregar Alunos.</p>
-          </div>
+          <EmptyState icon={<Users size={22} />} title="Selecione uma turma e clique em Carregar Alunos" />
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-[#f5f7f9]">
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
+              <tr className="border-b border-[#e3ebf1] bg-[#f3f7fa]">
+                <th className="px-6 py-3 text-left text-xs font-bold uppercase tracking-wide text-[#62798a]">
                   Aluno
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide w-32">
+                <th className="w-32 px-4 py-3 text-center text-xs font-bold uppercase tracking-wide text-[#62798a]">
                   Presente
                 </th>
               </tr>
             </thead>
             <tbody>
-              {presencas.map((p: PresencaLocal) => (
+              {presencas.map((p) => (
                 <tr
                   key={p.alunoId}
-                  className={`border-b border-gray-100 transition cursor-pointer hover:bg-gray-50 ${
+                  className={`cursor-pointer border-b border-[#eef2f7] transition hover:bg-[#f3f7fa] ${
                     p.presente ? "" : "bg-red-50/30"
                   }`}
                   onClick={() => onToggle(p.alunoId)}
                 >
-                  <td className="px-6 py-3 font-medium text-gray-900">{p.alunoNome}</td>
+                  <td className="px-6 py-3 font-semibold text-[#1f2d3a]">{p.alunoNome}</td>
                   <td className="px-4 py-3 text-center">
                     {p.presente ? (
-                      <CheckCircle size={20} className="text-green-500 mx-auto" />
+                      <CheckCircle size={20} className="mx-auto text-emerald-500" />
                     ) : (
-                      <XCircle size={20} className="text-red-400 mx-auto" />
+                      <XCircle size={20} className="mx-auto text-red-400" />
                     )}
                   </td>
                 </tr>
@@ -512,18 +552,18 @@ function FormTela({
 
       {/* Rodapé */}
       {presencas.length > 0 && (
-        <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col gap-3 sm:flex-row sm:items-center sm:px-6">
-          <button onClick={onTodos} className="text-xs text-blue-600 hover:underline font-medium">
+        <div className="flex flex-col gap-3 border-t border-[#e3ebf1] bg-white px-4 py-3 sm:flex-row sm:items-center sm:px-6">
+          <button onClick={onTodos} className="text-xs font-bold text-[#23638c] hover:underline">
             Todos presentes
           </button>
-          <button onClick={onNenhum} className="text-xs text-gray-500 hover:underline font-medium">
+          <button onClick={onNenhum} className="text-xs font-bold text-[#8ea0b0] hover:underline">
             Todos ausentes
           </button>
-          <span className="text-xs text-gray-500 sm:ml-auto">
-            Presentes: <strong>{presentes}</strong> / {presencas.length}
-            {" · "}Ausentes: <strong>{ausentes}</strong>
+          <span className="text-xs text-[#62798a] sm:ml-auto">
+            Presentes: <strong className="text-[#1f2d3a]">{presentes}</strong> / {presencas.length}
+            {" · "}Ausentes: <strong className="text-[#1f2d3a]">{ausentes}</strong>
           </span>
-          <Button onClick={onSalvar} loading={saving} className="w-full bg-green-600 hover:bg-green-700 text-white sm:w-auto">
+          <Button onClick={onSalvar} loading={saving} variant="success" className="w-full sm:w-auto">
             Salvar Chamada
           </Button>
         </div>
@@ -532,128 +572,194 @@ function FormTela({
   );
 }
 
+interface HistoricoTelaProps {
+  historico: Chamada[];
+  detalhe: Chamada | null;
+  presencasDetalhe: ChamadaPresenca[];
+  onAbrirDetalhe: (c: Chamada) => void;
+  onToggleDetalhe: (id: string | null) => void;
+  onMarcarTodosDetalhe: (presente: boolean) => void;
+  onSalvarEdicao: () => void;
+  savingDetalhe: boolean;
+  onExcluir: (c: Chamada) => void;
+  onFecharDetalhe: () => void;
+}
+
 function HistoricoTela({
   historico, detalhe, presencasDetalhe, onAbrirDetalhe,
-  onToggleDetalhe, onSalvarEdicao, savingDetalhe, onExcluir, onFecharDetalhe,
-}: any) {
-  const presentes = presencasDetalhe.filter((p: ChamadaPresenca) => p.presente).length;
+  onToggleDetalhe, onMarcarTodosDetalhe, onSalvarEdicao, savingDetalhe, onExcluir, onFecharDetalhe,
+}: HistoricoTelaProps) {
+  const presentesDetalhe = presencasDetalhe.filter((p) => p.presente).length;
+
+  const [filtroTurmaId, setFiltroTurmaId] = useState("");
+  const [filtroMes, setFiltroMes] = useState("");
+  const [filtroAno, setFiltroAno] = useState("");
+
+  const turmasDisponiveis = useMemo(() => {
+    const mapa = new Map<string, string>();
+    for (const c of historico) mapa.set(c.turmaId, c.turmaNome);
+    return Array.from(mapa.entries()).map(([id, nome]) => ({ value: id, label: nome }));
+  }, [historico]);
+
+  const anosDisponiveis = useMemo(() => {
+    const anos = new Set(historico.map((c) => c.dataAula.slice(0, 4)));
+    return Array.from(anos).sort((a, b) => b.localeCompare(a));
+  }, [historico]);
+
+  const historicoFiltrado = useMemo(() => {
+    return historico.filter((c) => {
+      const passaTurma = !filtroTurmaId || c.turmaId === filtroTurmaId;
+      const passaMes = !filtroMes || c.dataAula.slice(5, 7) === filtroMes;
+      const passaAno = !filtroAno || c.dataAula.slice(0, 4) === filtroAno;
+      return passaTurma && passaMes && passaAno;
+    });
+  }, [historico, filtroTurmaId, filtroMes, filtroAno]);
+
+  const columns: Column<Chamada>[] = [
+    {
+      key: "dataAula",
+      header: "Data",
+      render: (c) => <span className="font-semibold text-[#1f2d3a]">{formatarData(c.dataAula)}</span>,
+    },
+    { key: "turmaNome", header: "Turma" },
+    {
+      key: "horario",
+      header: "Horário",
+      render: (c) => <span className="font-mono text-xs text-[#62798a]">{c.horarioInicio}–{c.horarioFim}</span>,
+    },
+    {
+      key: "presenca",
+      header: "Presença",
+      render: (c) => {
+        const pct = c.totalAlunos > 0 ? Math.round((c.totalPresentes / c.totalAlunos) * 100) : 0;
+        return (
+          <Badge variant={presencaTone(pct)}>
+            {c.totalPresentes}/{c.totalAlunos} ({pct}%)
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "acoes",
+      header: "",
+      width: "w-20",
+      render: (c) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); onExcluir(c); }}
+          className="text-xs font-semibold text-red-400 transition hover:text-red-600"
+        >
+          Apagar
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
-      {/* Lista */}
-      <div className="flex-1 overflow-auto">
-        {historico.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <AlertCircle size={40} className="opacity-20 mb-2" />
-            <p className="text-sm">Nenhuma chamada registrada.</p>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Data</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Turma</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Horário</th>
-                <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Presença</th>
-                <th className="px-4 py-3 w-20" />
-              </tr>
-            </thead>
-            <tbody>
-              {historico.map((c: Chamada) => {
-                const pct = c.totalAlunos > 0 ? Math.round((c.totalPresentes / c.totalAlunos) * 100) : 0;
-                return (
-                  <tr
-                    key={c.id}
-                    onClick={() => onAbrirDetalhe(c)}
-                    className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${
-                      detalhe?.id === c.id ? "bg-blue-50" : ""
-                    }`}
-                  >
-                    <td className="px-6 py-3 font-medium text-gray-900">{formatarData(c.dataAula)}</td>
-                    <td className="px-4 py-3 text-gray-700">{c.turmaNome}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs font-mono">
-                      {c.horarioInicio}–{c.horarioFim}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-semibold ${pct >= 75 ? "text-green-600" : pct >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                        {c.totalPresentes}/{c.totalAlunos} ({pct}%)
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onExcluir(c); }}
-                        className="text-xs text-red-400 hover:text-red-600 transition"
-                      >
-                        Apagar
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+    <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#e3ebf1] bg-white px-4 py-3 sm:px-6">
+        <div className="w-full sm:w-56">
+          <Select
+            value={filtroTurmaId}
+            onChange={(e) => setFiltroTurmaId(e.target.value)}
+            options={[{ value: "", label: "Todas as turmas" }, ...turmasDisponiveis]}
+          />
+        </div>
+        <div className="w-full sm:w-40">
+          <Select
+            value={filtroMes}
+            onChange={(e) => setFiltroMes(e.target.value)}
+            options={[
+              { value: "", label: "Todos os meses" },
+              ...MESES.map((m, i) => ({ value: String(i + 1).padStart(2, "0"), label: m })),
+            ]}
+          />
+        </div>
+        <div className="w-full sm:w-32">
+          <Select
+            value={filtroAno}
+            onChange={(e) => setFiltroAno(e.target.value)}
+            options={[{ value: "", label: "Todos os anos" }, ...anosDisponiveis.map((a) => ({ value: a, label: a }))]}
+          />
+        </div>
       </div>
 
-      {/* Painel de detalhe */}
-      {detalhe && (
-        <div className="max-h-[50vh] w-full flex-none flex flex-col bg-white border-t border-gray-200 lg:max-h-none lg:w-80 lg:border-l lg:border-t-0">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <div>
-              <p className="text-sm font-bold text-gray-900">
-                {formatarData(detalhe.dataAula)} · {detalhe.turmaNome}
-              </p>
-              <p className="text-xs text-gray-500">
-                {detalhe.horarioInicio}–{detalhe.horarioFim}
-              </p>
-            </div>
-            <button onClick={onFecharDetalhe} className="text-gray-400 hover:text-gray-600">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-3">
-            <button
-              onClick={() => {/* todos */}}
-              className="text-xs text-blue-600 hover:underline"
-            >Todos ✓</button>
-            <button
-              onClick={() => {/* nenhum */}}
-              className="text-xs text-gray-500 hover:underline"
-            >Todos ✗</button>
-            <span className="text-xs text-gray-500 ml-auto">{presentes}/{presencasDetalhe.length}</span>
-          </div>
-
-          <div className="flex-1 overflow-auto">
-            {presencasDetalhe.map((p: ChamadaPresenca) => (
-              <div
-                key={p.id ?? p.alunoId}
-                onClick={() => onToggleDetalhe(p.id ?? p.alunoId)}
-                className={`flex items-center justify-between px-4 py-2.5 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                  !p.presente ? "bg-red-50/30" : ""
-                }`}
-              >
-                <span className="text-sm text-gray-800">{p.alunoNome}</span>
-                {p.presente ? (
-                  <CheckCircle size={16} className="text-green-500" />
-                ) : (
-                  <XCircle size={16} className="text-red-400" />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 border-t border-gray-100">
-            <Button
-              onClick={onSalvarEdicao}
-              loading={savingDetalhe}
-              className="w-full justify-center"
-            >
-              Salvar Alterações
-            </Button>
-          </div>
+      <div className="flex flex-1 overflow-hidden lg:flex-row">
+        {/* Lista */}
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
+          {historicoFiltrado.length === 0 ? (
+            <EmptyState icon={<AlertCircle size={22} />} title="Nenhuma chamada encontrada" />
+          ) : (
+            <Table<Chamada>
+              columns={columns}
+              data={historicoFiltrado}
+              rowKey={(c) => c.id}
+              onRowClick={onAbrirDetalhe}
+              rowClassName={(c) => (detalhe?.id === c.id ? "bg-[#e8f1f6]" : "")}
+              pageSize={15}
+            />
+          )}
         </div>
-      )}
+
+        {/* Painel de detalhe */}
+        {detalhe && (
+          <div className="flex max-h-[50vh] w-full flex-none flex-col border-t border-[#e3ebf1] bg-white lg:max-h-none lg:w-80 lg:border-l lg:border-t-0">
+            <div className="flex items-center justify-between border-b border-[#e3ebf1] px-4 py-3">
+              <div>
+                <p className="text-sm font-bold text-[#1f2d3a]">
+                  {formatarData(detalhe.dataAula)} · {detalhe.turmaNome}
+                </p>
+                <p className="text-xs text-[#8ea0b0]">
+                  {detalhe.horarioInicio}–{detalhe.horarioFim}
+                </p>
+              </div>
+              <button onClick={onFecharDetalhe} className="text-[#8ea0b0] hover:text-[#45566a]" aria-label="Fechar detalhe">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 border-b border-[#e3ebf1] bg-[#f3f7fa] px-4 py-2">
+              <button
+                onClick={() => onMarcarTodosDetalhe(true)}
+                className="text-xs font-bold text-[#23638c] hover:underline"
+              >Todos ✓</button>
+              <button
+                onClick={() => onMarcarTodosDetalhe(false)}
+                className="text-xs font-bold text-[#8ea0b0] hover:underline"
+              >Todos ✗</button>
+              <span className="ml-auto text-xs text-[#62798a]">{presentesDetalhe}/{presencasDetalhe.length}</span>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {presencasDetalhe.map((p) => (
+                <div
+                  key={p.id ?? p.alunoId}
+                  onClick={() => onToggleDetalhe(p.id ?? p.alunoId)}
+                  className={`flex cursor-pointer items-center justify-between border-b border-[#eef2f7] px-4 py-2.5 transition hover:bg-[#f3f7fa] ${
+                    !p.presente ? "bg-red-50/30" : ""
+                  }`}
+                >
+                  <span className="text-sm text-[#1f2d3a]">{p.alunoNome}</span>
+                  {p.presente ? (
+                    <CheckCircle size={16} className="text-emerald-500" />
+                  ) : (
+                    <XCircle size={16} className="text-red-400" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-[#e3ebf1] p-4">
+              <Button
+                onClick={onSalvarEdicao}
+                loading={savingDetalhe}
+                className="w-full justify-center"
+              >
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -56,20 +56,20 @@ function AutoLoginContent() {
       <div style={{
         minHeight: "100vh", display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center", gap: "16px",
-        background: "#f0f2f5", fontFamily: "system-ui, sans-serif",
+        background: "#eef2f7", fontFamily: "var(--font-nunito), system-ui, sans-serif",
       }}>
         <span style={{ fontSize: "3rem" }}>🚫</span>
-        <h2 style={{ color: "#2f3542", fontWeight: 900, fontSize: "1.4rem", margin: 0 }}>
+        <h2 style={{ color: "#1f2d3a", fontWeight: 900, fontSize: "1.4rem", margin: 0 }}>
           Acesso negado
         </h2>
-        <p style={{ color: "#7f8c8d", fontWeight: 700, textAlign: "center", maxWidth: 320 }}>
+        <p style={{ color: "#62798a", fontWeight: 700, textAlign: "center", maxWidth: 320 }}>
           {errorMsg}
         </p>
         <button
           onClick={() => router.replace("/login")}
           style={{
             marginTop: "8px", padding: "12px 28px",
-            background: "#2b6cb0", color: "white",
+            background: "#23638c", color: "white",
             border: "none", borderRadius: "12px",
             fontWeight: 800, fontSize: "1rem", cursor: "pointer",
           }}
@@ -84,10 +84,10 @@ function AutoLoginContent() {
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center", gap: "16px",
-      background: "#f0f2f5", fontFamily: "system-ui, sans-serif",
+      background: "#eef2f7", fontFamily: "var(--font-nunito), system-ui, sans-serif",
     }}>
       <span style={{ fontSize: "3rem", animation: "spin 1s linear infinite" }}>⚙️</span>
-      <p style={{ color: "#2f3542", fontWeight: 800, fontSize: "1.1rem" }}>
+      <p style={{ color: "#1f2d3a", fontWeight: 800, fontSize: "1.1rem" }}>
         Conectando ao painel…
       </p>
       <style>{`

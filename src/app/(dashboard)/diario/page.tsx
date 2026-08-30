@@ -1,9 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Plus, Trash2, BookOpen, RefreshCw } from "lucide-react";
+import { Plus, Trash2, BookOpen, RefreshCw } from "lucide-react";
 import { useSessionStore } from "@/store/session";
-import { Button, Input, Select, SidePanel, Spinner } from "@/components/ui";
+import {
+  Button,
+  Input,
+  Select,
+  SidePanel,
+  PageHeader,
+  Table,
+  type Column,
+  EmptyState,
+  useConfirmDialog,
+} from "@/components/ui";
 import toast from "react-hot-toast";
 import type { DiarioAula, Turma } from "@/lib/types";
 
@@ -22,6 +32,7 @@ function previewConteudo(c: string): string {
 
 export default function DiarioPage() {
   const { sessao } = useSessionStore();
+  const confirm = useConfirmDialog();
   const profId = sessao?.id ?? "";
 
   const [entradas, setEntradas] = useState<DiarioAula[]>([]);
@@ -136,7 +147,13 @@ export default function DiarioPage() {
   }
 
   async function handleExcluir(entrada: DiarioAula) {
-    if (!confirm(`Excluir entrada de ${formatarData(entrada.dataAula)} — ${entrada.turmaNome}?`)) return;
+    const ok = await confirm({
+      title: "Excluir entrada do diário",
+      description: `Excluir entrada de ${formatarData(entrada.dataAula)} — ${entrada.turmaNome}?`,
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await fetch(`/api/diario/${entrada.id}`, { method: "DELETE" });
       toast.success("Entrada excluída.");
@@ -145,122 +162,109 @@ export default function DiarioPage() {
     } catch { toast.error("Erro ao excluir."); }
   }
 
+  const columns: Column<DiarioAula>[] = [
+    {
+      key: "dataAula",
+      header: "Data",
+      width: "w-28",
+      render: (e) => (
+        <span className="whitespace-nowrap font-semibold text-[#1f2d3a]">
+          {formatarData(e.dataAula)}
+        </span>
+      ),
+    },
+    { key: "turmaNome", header: "Turma", width: "w-40" },
+    {
+      key: "titulo",
+      header: "Título",
+      render: (e) => e.titulo || <span className="text-[#8ea0b0]">—</span>,
+    },
+    {
+      key: "conteudo",
+      header: "Conteúdo",
+      render: (e) => (
+        <span className="text-xs text-[#62798a]">
+          {previewConteudo(e.conteudo)}
+          {e.observacoes.trim() !== "" && (
+            <span className="ml-2 font-semibold text-amber-600">⚠ obs.</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "acoes",
+      header: "",
+      width: "w-16",
+      render: (e) => (
+        <button
+          onClick={(ev) => { ev.stopPropagation(); handleExcluir(e); }}
+          className="rounded p-1.5 text-[#8ea0b0] transition hover:bg-red-50 hover:text-red-600"
+          aria-label="Excluir entrada"
+        >
+          <Trash2 size={13} />
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="flex h-full">
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex flex-col gap-3 px-4 py-4 bg-white border-b border-slate-200 sm:flex-row sm:items-center sm:flex-wrap sm:px-6">
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Diário de Aulas</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Registre o conteúdo e observações de cada aula
-            </p>
-          </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <PageHeader
+          title="Diário de Aulas"
+          subtitle="Registre o conteúdo e observações de cada aula"
+          searchValue={busca}
+          onSearchChange={setBusca}
+          searchPlaceholder="Buscar título, conteúdo…"
+          actions={
+            <>
+              <div className="w-full sm:w-48">
+                <Select
+                  value={filtroTurmaId}
+                  onChange={(e) => setFiltroTurmaId(e.target.value)}
+                  options={[
+                    { value: "", label: "Todas as turmas" },
+                    ...turmas.map((t) => ({ value: t.id, label: t.nome })),
+                  ]}
+                />
+              </div>
+              <button
+                onClick={carregar}
+                className="rounded-lg p-2 text-[#8ea0b0] transition hover:bg-[#f3f7fa] hover:text-[#45566a]"
+                aria-label="Atualizar"
+              >
+                <RefreshCw size={15} />
+              </button>
+              <Button onClick={abrirNovo} size="md">
+                <Plus size={14} /> Nova Entrada
+              </Button>
+            </>
+          }
+        />
 
-          <div className="w-full sm:w-48">
-            <Select
-              value={filtroTurmaId}
-              onChange={(e) => setFiltroTurmaId(e.target.value)}
-              options={[
-                { value: "", label: "Todas as turmas" },
-                ...turmas.map((t) => ({ value: t.id, label: t.nome })),
-              ]}
+        <div className="flex-1 overflow-auto p-4 sm:p-6">
+          {filtrado.length === 0 && !loading ? (
+            <EmptyState
+              icon={<BookOpen size={22} />}
+              title="Nenhuma entrada no diário"
+              message='Clique em "Nova Entrada" para começar.'
             />
-          </div>
-
-          <div className="relative w-full sm:w-auto">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar título, conteúdo..."
-              className="w-full pl-8 pr-4 py-2 text-sm border border-slate-300 rounded-md sm:w-56 focus:outline-none focus:ring-2 focus:ring-[#285a82]/20 bg-white"
-            />
-          </div>
-
-          <div className="hidden sm:block sm:flex-1" />
-
-          <button
-            onClick={carregar}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
-          >
-            <RefreshCw size={15} />
-          </button>
-
-          <Button onClick={abrirNovo} size="md" className="w-full sm:w-auto">
-            <Plus size={14} /> Nova Entrada
-          </Button>
-        </div>
-
-        {/* Tabela */}
-        <div className="flex-1 overflow-auto">
-          {loading ? (
-            <Spinner />
-          ) : filtrado.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-2">
-              <BookOpen size={48} className="opacity-20 mb-2" />
-              <p className="text-sm">Nenhuma entrada no diário.</p>
-              <p className="text-xs">Clique em "Nova Entrada" para começar.</p>
-            </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-[#f5f7f9]">
-                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide w-28">Data</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide w-40">Turma</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Título</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wide">Conteúdo</th>
-                  <th className="px-4 py-3 w-16" />
-                </tr>
-              </thead>
-              <tbody>
-                {filtrado.map((entrada) => {
-                  const temObs = entrada.observacoes && entrada.observacoes.trim() !== "";
-                  return (
-                    <tr
-                      key={entrada.id}
-                      onClick={() => abrirEditar(entrada)}
-                      className={`border-b border-slate-100 cursor-pointer transition hover:bg-[#f4f8fb] ${
-                        temObs ? "bg-amber-50/40" : ""
-                      } ${editando?.id === entrada.id ? "bg-blue-50" : ""}`}
-                    >
-                      <td className="px-6 py-3 font-medium text-gray-900 whitespace-nowrap">
-                        {formatarData(entrada.dataAula)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{entrada.turmaNome}</td>
-                      <td className="px-4 py-3 text-gray-700 font-medium">
-                        {entrada.titulo || <span className="text-gray-400 font-normal">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {previewConteudo(entrada.conteudo)}
-                        {temObs && (
-                          <span className="ml-2 text-amber-600 font-semibold">⚠ obs.</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleExcluir(entrada); }}
-                          className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <>
+              <Table<DiarioAula>
+                columns={columns}
+                data={filtrado}
+                rowKey={(e) => e.id}
+                loading={loading}
+                onRowClick={abrirEditar}
+                rowClassName={(e) => (e.observacoes.trim() !== "" ? "bg-amber-50/40" : "")}
+                pageSize={20}
+              />
+              <p className="mt-3 text-xs text-[#8ea0b0]">
+                <span className="text-amber-600">⚠</span> Linha em destaque = entrada com observações
+              </p>
+            </>
           )}
-        </div>
-
-        {/* Rodapé */}
-        <div className="px-6 py-2 border-t border-gray-100 bg-white">
-          <p className="text-xs text-gray-400">
-            {filtrado.length} entrada{filtrado.length !== 1 ? "s" : ""}
-            {busca && ` para "${busca}"`}
-            {" · "}
-            <span className="text-amber-600">⚠ Linha em destaque = entrada com observações</span>
-          </p>
         </div>
       </div>
 
@@ -283,14 +287,14 @@ export default function DiarioPage() {
           />
 
           <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+            <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#45566a]">
               Data da Aula
             </label>
             <input
               type="date"
               value={dataForm}
               onChange={(e) => setDataForm(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
             />
           </div>
 
@@ -302,30 +306,30 @@ export default function DiarioPage() {
           />
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+            <label className="block text-xs font-bold uppercase tracking-wide text-[#45566a]">
               Conteúdo Trabalhado
             </label>
-            <p className="text-xs text-gray-400">O que foi abordado, exercícios, recursos...</p>
+            <p className="text-xs text-[#8ea0b0]">O que foi abordado, exercícios, recursos...</p>
             <textarea
               value={conteudo}
               onChange={(e) => setConteudo(e.target.value)}
               rows={5}
               placeholder="Descreva o conteúdo da aula..."
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full resize-none rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+            <label className="block text-xs font-bold uppercase tracking-wide text-[#45566a]">
               Observações
             </label>
-            <p className="text-xs text-gray-400">Comportamento, dificuldades, destaques...</p>
+            <p className="text-xs text-[#8ea0b0]">Comportamento, dificuldades, destaques...</p>
             <textarea
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               rows={3}
               placeholder="Anotações livres sobre a aula ou alunos..."
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full resize-none rounded border border-[#d4e1e9] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#23638c]/20"
             />
           </div>
 

@@ -4,8 +4,16 @@
 // que só é aplicada às rotas dentro do route group (dashboard).
 
 import type { Metadata } from "next";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
+  variable: "--font-nunito",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "SAG — Sistema de Aulas e Gestão",
@@ -18,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR">
-      <body className="antialiased">
+    <html lang="pt-BR" className={nunito.variable}>
+      <body className="antialiased font-sans">
         {children}
         <Toaster
           position="bottom-right"

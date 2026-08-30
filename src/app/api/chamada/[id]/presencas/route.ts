@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { ChamadaPresenca } from "@/lib/types";
-import { getRequestSession } from "@/lib/request-authorization";
+import { getRequestSession, hasRole } from "@/lib/request-authorization";
  
 export async function GET(
   request: NextRequest,
@@ -21,7 +21,7 @@ export async function GET(
       JOIN chamadas c ON c.id = cp.chamada_id
       WHERE cp.chamada_id = ${id}::uuid
         AND (
-          ${session.actor.role === "ADMIN"}
+          ${hasRole(session.actor, "ADMIN")}
           OR c.professor_id = ${session.actor.id}::uuid
         )
       ORDER BY p.nome
@@ -58,7 +58,7 @@ export async function PATCH(
       FROM chamadas
       WHERE id = ${id}::uuid
         AND (
-          ${session.actor.role === "ADMIN"}
+          ${hasRole(session.actor, "ADMIN")}
           OR professor_id = ${session.actor.id}::uuid
         )
       LIMIT 1

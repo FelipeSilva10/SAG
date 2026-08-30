@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import { requireRole } from "@/lib/request-authorization";
 
 // PATCH /api/escolas/:id
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   const { id } = await params;
   try {
     const { nome, tipo } = await request.json();
@@ -25,9 +29,12 @@ export async function PATCH(
 
 // DELETE /api/escolas/:id
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   const { id } = await params;
   try {
     await sql`DELETE FROM escolas WHERE id = ${id}::uuid`;

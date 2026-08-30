@@ -4,13 +4,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { create } from "zustand";
-import type { UsuarioSessao } from "@/lib/types";
+import type { Role, UsuarioSessao } from "@/lib/types";
 
 interface SessionStore {
   sessao: UsuarioSessao | null;
   setSessao: (sessao: UsuarioSessao) => void;
   clearSessao: () => void;
+  hasRole: (role: Role) => boolean;
   isAdmin: () => boolean;
+  isTeacher: () => boolean;
 }
 
 export const useSessionStore = create<SessionStore>()((set, get) => ({
@@ -20,5 +22,9 @@ export const useSessionStore = create<SessionStore>()((set, get) => ({
 
   clearSessao: () => set({ sessao: null }),
 
-  isAdmin: () => get().sessao?.role === "ADMIN",
+  hasRole: (role) => get().sessao?.roles.includes(role) ?? false,
+
+  isAdmin: () => get().hasRole("ADMIN"),
+
+  isTeacher: () => get().hasRole("TEACHER"),
 }));

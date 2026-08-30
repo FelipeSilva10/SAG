@@ -3,12 +3,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── Sessão ────────────────────────────────────────────────────────────────────
+// Uma identidade pode acumular mais de um papel (ex.: admin + professor).
+// Nunca assuma que `roles` tem exatamente um elemento — use hasRole().
 export type Role = "ADMIN" | "TEACHER";
 
 export interface UsuarioSessao {
   id:              string;
   nome:            string;
-  role:            Role;
+  roles:           Role[];
   mustChangeSenha?: boolean; // sinaliza que o professor deve trocar a senha no próximo login
 }
 

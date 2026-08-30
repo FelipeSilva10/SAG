@@ -1,5 +1,38 @@
 # Autenticação server-side do SAG
 
+## Identidade única, múltiplos papéis
+
+Uma conta do SAG é uma linha de `public.perfis` (a mesma tabela usada pelo
+Bloquin). Os papéis de painel que essa conta pode exercer — `admin`,
+`teacher`, ou os dois ao mesmo tempo — vivem em `public.perfis_papeis`
+(`perfil_id`, `papel`), uma tabela nova e exclusiva do backoffice do SAG,
+nunca exposta ao Data API do Bloquin. `perfis.role` continua existindo e
+significando o que sempre significou para o Bloquin (`teacher`/`student`, e
+agora também `admin` para quem só administra) — nenhuma política RLS do
+Bloquin foi alterada.
+
+Isso elimina a necessidade histórica de duas contas para uma mesma pessoa
+(uma "admin" e uma "professor"): quem acumula os dois papéis loga uma única
+vez e a sessão carrega `roles: ["ADMIN", "TEACHER"]`. O código nunca deve
+assumir que `roles` tem exatamente um elemento — toda checagem de permissão
+passa por `hasRole(actor, papel)` (`src/lib/panel-session-core.ts`), nunca
+por comparação direta de igualdade.
+
+A tabela `public.backoffice_admins` (identidade de admin desconectada de
+`auth.users`, anterior a este modelo) não é mais lida pelo login — fica
+preservada só para auditoria/rollback. Ver
+`supabase/migrations/20260830130000_add_multi_role_papeis.sql` no
+repositório Bloquin para o schema e `scripts/link-admin-role.mjs` para a
+migração de dados (ligar um admin existente a um perfil de professor, ou
+criar uma identidade admin nova).
+
+As RPCs de sessão (`create_backoffice_session`, `validate_backoffice_session`,
+`consume_admin_panel_handoff`) sempre leem os papéis atuais de
+`perfis_papeis` — revogar um papel (ex.: tirar o admin de alguém) tem efeito
+na próxima validação de sessão, não precisa esperar a sessão de 8h expirar.
+
+## Sessão opaca
+
 O SAG aceita dois caminhos de entrada, ambos terminando na mesma sessão opaca
 persistida como SHA-256 em `public.backoffice_sessions`:
 

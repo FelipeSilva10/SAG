@@ -7,6 +7,7 @@ import type { Aluno } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   getRequestSession,
+  hasRole,
   resolveProfessorId,
 } from "@/lib/request-authorization";
 
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
   try {
     let rows;
 
-    if (session.actor.role === "TEACHER") {
+    if (!hasRole(session.actor, "ADMIN")) {
       rows = await sql`
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,

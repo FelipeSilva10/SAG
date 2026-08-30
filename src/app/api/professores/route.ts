@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requireRole } from "@/lib/request-authorization";
 import type { Professor } from "@/lib/types";
 
 function mapProf(r: Record<string, unknown>): Professor {
@@ -16,7 +17,10 @@ function mapProf(r: Record<string, unknown>): Professor {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const rows = await sql`
       SELECT id, nome, email, access_status, entity_status, must_change_senha
@@ -32,6 +36,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { nome, email, senha } = await request.json();
 

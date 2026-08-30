@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { getRequestSession } from "@/lib/request-authorization";
+import { getRequestSession, hasRole } from "@/lib/request-authorization";
 
 export async function DELETE(
   request: NextRequest,
@@ -14,7 +14,7 @@ export async function DELETE(
     }
 
     const deleted = await sql.begin(async (tx: any) => {
-      const owned = session.actor.role === "ADMIN"
+      const owned = hasRole(session.actor, "ADMIN")
         ? await tx`
             SELECT id FROM chamadas
             WHERE id = ${id}::uuid

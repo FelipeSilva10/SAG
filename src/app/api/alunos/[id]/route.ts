@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requireRole } from "@/lib/request-authorization";
 
 // ── PATCH /api/alunos/[id] — atualiza nome, senha e turma ────────────────────
 
@@ -21,6 +22,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = await params;
     const { nome, email, senha, turmaId } = await request.json();
@@ -83,6 +87,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = await params;
     const admin = getSupabaseAdmin();

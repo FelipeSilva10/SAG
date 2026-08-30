@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { getRequestSession } from "@/lib/request-authorization";
+import { getRequestSession, hasRole } from "@/lib/request-authorization";
  
 export async function DELETE(
   request: NextRequest,
@@ -13,7 +13,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
     }
 
-    const deleted = session.actor.role === "ADMIN"
+    const deleted = hasRole(session.actor, "ADMIN")
       ? await sql`
           DELETE FROM cronograma_aulas
           WHERE id = ${id}::uuid

@@ -11,6 +11,15 @@ import toast from "react-hot-toast";
 
 type FormMode = "new" | "edit";
 
+const DIAS_SEMANA_OPCOES = [
+  { value: "SEGUNDA", label: "Segunda-feira" },
+  { value: "TERÇA", label: "Terça-feira" },
+  { value: "QUARTA", label: "Quarta-feira" },
+  { value: "QUINTA", label: "Quinta-feira" },
+  { value: "SEXTA", label: "Sexta-feira" },
+  { value: "SÁBADO", label: "Sábado" },
+];
+
 export default function TurmasPage() {
   const { turmas, loading, fetchTurmas, criar, atualizar, excluir } = useTurmas();
   const { escolas } = useEscolas(); // Reutilizando as escolas para o select
@@ -31,6 +40,9 @@ export default function TurmasPage() {
   const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
   const [escolaIdForm, setEscolaIdForm] = useState("");
   const [professorIdForm, setProfessorIdForm] = useState("");
+  const [diaSemanaForm, setDiaSemanaForm] = useState("SEGUNDA");
+  const [horarioInicioForm, setHorarioInicioForm] = useState("");
+  const [horarioFimForm, setHorarioFimForm] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -71,6 +83,9 @@ export default function TurmasPage() {
     setAnoLetivo(new Date().getFullYear().toString());
     setEscolaIdForm(escolaFiltro || (escolas.length > 0 ? escolas[0].id : ""));
     setProfessorIdForm("");
+    setDiaSemanaForm("SEGUNDA");
+    setHorarioInicioForm("");
+    setHorarioFimForm("");
     setPanelOpen(true);
   }
 
@@ -81,6 +96,9 @@ export default function TurmasPage() {
     setAnoLetivo(turma.anoLetivo);
     setEscolaIdForm(turma.escolaId);
     setProfessorIdForm(turma.professorId || "");
+    setDiaSemanaForm("SEGUNDA");
+    setHorarioInicioForm("");
+    setHorarioFimForm("");
     setPanelOpen(true);
   }
 
@@ -94,13 +112,25 @@ export default function TurmasPage() {
       toast.error("Preencha nome, ano letivo e escola.");
       return;
     }
+    if (formMode === "new" && (!professorIdForm || !horarioInicioForm || !horarioFimForm)) {
+      toast.error("Informe o professor e o horário da turma.");
+      return;
+    }
+    if (formMode === "new" && horarioInicioForm >= horarioFimForm) {
+      toast.error("O horário de término deve ser posterior ao de início.");
+      return;
+    }
     setSaving(true);
     try {
-      const profId = professorIdForm === "" ? null : professorIdForm;
       if (formMode === "new") {
-        await criar(escolaIdForm, nome.trim(), anoLetivo.trim(), profId);
+        await criar(escolaIdForm, nome.trim(), anoLetivo.trim(), professorIdForm, {
+          diaSemana: diaSemanaForm,
+          horarioInicio: horarioInicioForm,
+          horarioFim: horarioFimForm,
+        });
         toast.success("Turma cadastrada com sucesso!");
       } else if (editTarget) {
+        const profId = professorIdForm === "" ? null : professorIdForm;
         await atualizar(editTarget.id, escolaIdForm, nome.trim(), anoLetivo.trim(), profId);
         toast.success("Turma atualizada!");
       }
@@ -255,7 +285,11 @@ export default function TurmasPage() {
         width="w-80 sm:w-[26rem]"
       >
         <div className="rounded-md border border-[#c9d9e5] bg-[#f2f6f9] px-4 py-3 text-xs leading-relaxed text-[#285a82]">
-          {admin ? "Uma turma precisa estar vinculada a uma escola. O professor pode ser atribuído agora ou depois." : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
+          {admin
+            ? formMode === "new"
+              ? "Defina o professor e o horário para que a turma já seja criada com seu cronograma."
+              : "Atualize os vínculos da turma. Os horários podem ser gerenciados no Cronograma."
+            : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
         </div>
         <div className="border-t border-slate-100 pt-4">
           <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Informações básicas</p>
@@ -263,7 +297,16 @@ export default function TurmasPage() {
             <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
             <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
             <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin} options={escolas.map((e) => ({ value: e.id, label: e.nome }))} />
-            {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
+            {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: formMode === "new" ? "Selecione o professor" : "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
+            {admin && formMode === "new" && (
+              <>
+                <Select label="Dia da semana" value={diaSemanaForm} onChange={(e) => setDiaSemanaForm(e.target.value)} options={DIAS_SEMANA_OPCOES} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="Horário de início" type="time" value={horarioInicioForm} onChange={(e) => setHorarioInicioForm(e.target.value)} />
+                  <Input label="Horário de término" type="time" value={horarioFimForm} onChange={(e) => setHorarioFimForm(e.target.value)} />
+                </div>
+              </>
+            )}
           </div>
         </div>
         {admin && (

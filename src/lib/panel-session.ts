@@ -3,7 +3,6 @@ import "server-only";
 import type { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { UsuarioSessao } from "@/lib/types";
 import {
   generateOpaqueToken,
   isOpaqueToken,
@@ -63,11 +62,10 @@ export async function exchangeAdminHandoff(
 }
 
 export async function createDirectPanelSession(
-  actor: UsuarioSessao,
+  actorId: string,
 ): Promise<{ rawToken: string; session: ValidatedPanelSession }> {
   const result = await createSessionFromRpc("create_backoffice_session", {
-    p_actor_id: actor.id,
-    p_actor_type: actor.role.toLowerCase(),
+    p_actor_id: actorId,
   });
   if (!result) throw new Error("panel_session_creation_failed");
   return result;

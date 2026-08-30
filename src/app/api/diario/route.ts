@@ -5,6 +5,7 @@ import sql from "@/lib/db";
 import type { DiarioAula } from "@/lib/types";
 import {
   getRequestSession,
+  hasRole,
   resolveProfessorId,
 } from "@/lib/request-authorization";
 
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "professorId, turmaId e dataAula são obrigatórios." }, { status: 400 });
     }
 
-    if (session.actor.role === "TEACHER") {
+    if (!hasRole(session.actor, "ADMIN")) {
       const ownedClass = await sql`
         SELECT 1
         FROM turmas

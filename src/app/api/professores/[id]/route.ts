@@ -2,9 +2,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { requireRole } from "@/lib/request-authorization";
 
 // PATCH /api/professores/[id] — Atualiza o professor
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = await params;
     const { nome, email, senha } = await request.json();
@@ -43,6 +47,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
 // DELETE /api/professores/[id] — Deleta do Supabase Auth e do banco
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { id } = await params;
     const admin = getSupabaseAdmin();

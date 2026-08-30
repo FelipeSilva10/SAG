@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  hasRole,
   LEGACY_PANEL_SESSION_COOKIE,
   PANEL_SESSION_COOKIE,
 } from "@/lib/panel-session-core";
@@ -76,7 +77,7 @@ export async function middleware(request: NextRequest) {
   const session = await validatePanelSessionToken(rawToken);
   if (!session) return unauthorizedResponse(request);
 
-  if (session.actor.role !== "ADMIN" && isAdminOnlyRequest(request)) {
+  if (!hasRole(session.actor, "ADMIN") && isAdminOnlyRequest(request)) {
     return forbiddenResponse(request);
   }
 

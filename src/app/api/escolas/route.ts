@@ -8,6 +8,7 @@ import sql from "@/lib/db";
 import type { Escola } from "@/lib/types";
 import {
   getRequestSession,
+  requireRole,
   resolveProfessorId,
 } from "@/lib/request-authorization";
 
@@ -61,6 +62,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/escolas — criar escola
 export async function POST(request: NextRequest) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
+
   try {
     const { nome, tipo = "PUBLICA" } = await request.json();
 

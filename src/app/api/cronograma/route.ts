@@ -5,6 +5,7 @@ import sql from "@/lib/db";
 import type { CronogramaAula } from "@/lib/types";
 import {
   getRequestSession,
+  hasRole,
   resolveProfessorId,
 } from "@/lib/request-authorization";
 
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Professor é obrigatório." }, { status: 400 });
     }
 
-    if (session.actor.role === "TEACHER") {
+    if (!hasRole(session.actor, "ADMIN")) {
       const ownedClass = await sql`
         SELECT 1
         FROM turmas
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
         ${tipo ?? "AULA"},
         ${dataInicio ?? null}::date,
         ${dataFim ?? null}::date,
-        ${session.actor.role === "ADMIN" ? "ADMIN" : "PROFESSOR"}
+        ${hasRole(session.actor, "ADMIN") ? "ADMIN" : "PROFESSOR"}
       )
     `;
 

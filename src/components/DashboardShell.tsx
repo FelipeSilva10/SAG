@@ -10,14 +10,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type { UsuarioSessao } from "@/lib/types";
+import type { Role, UsuarioSessao } from "@/lib/types";
 
 interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
-  adminOnly?: boolean;
-  teacherOnly?: boolean;
+  // Ausente = visível para qualquer papel. Presente = exige QUALQUER um dos
+  // papéis listados (não é exclusivo — quem tem os dois vê os itens dos dois).
+  requiresRole?: Role[];
 }
 
 const NAV_PRINCIPAL: NavItem[] = [
@@ -28,24 +29,30 @@ const NAV_GESTAO: NavItem[] = [
   { label: "Escolas", href: "/escolas", icon: <School size={16} /> },
   { label: "Turmas", href: "/turmas", icon: <Users size={16} /> },
   { label: "Alunos", href: "/alunos", icon: <GraduationCap size={16} /> },
-  { label: "Professores", href: "/professores", icon: <BookUser size={16} />, adminOnly: true },
+  { label: "Professores", href: "/professores", icon: <BookUser size={16} />, requiresRole: ["ADMIN"] },
 ];
 
 const NAV_MODULOS: NavItem[] = [
   { label: "Cronograma", href: "/cronograma", icon: <CalendarDays size={16} /> },
-  { label: "Chamada", href: "/chamada", icon: <ClipboardCheck size={16} />, teacherOnly: true },
-  { label: "Diário de Aulas", href: "/diario", icon: <BookOpen size={16} />, teacherOnly: true },
+  { label: "Chamada", href: "/chamada", icon: <ClipboardCheck size={16} />, requiresRole: ["TEACHER"] },
+  { label: "Diário de Aulas", href: "/diario", icon: <BookOpen size={16} />, requiresRole: ["TEACHER"] },
   { label: "Horas", href: "/horas", icon: <Clock size={16} /> },
 ];
 
 const ALL_NAV_ITEMS = [...NAV_PRINCIPAL, ...NAV_GESTAO, ...NAV_MODULOS];
 
-function getVisibleItems(items: NavItem[], admin: boolean) {
+function getVisibleItems(items: NavItem[], roles: Role[]) {
   return items.filter((item) => {
-    if (item.adminOnly && !admin) return false;
-    if (item.teacherOnly && admin) return false;
-    return true;
+    if (!item.requiresRole) return true;
+    return item.requiresRole.some((role) => roles.includes(role));
   });
+}
+
+function roleLabel(roles: Role[]): string {
+  const labels: string[] = [];
+  if (roles.includes("ADMIN")) labels.push("Administrador");
+  if (roles.includes("TEACHER")) labels.push("Professor");
+  return labels.join(" · ") || "Usuário";
 }
 
 export default function DashboardShell({
@@ -60,7 +67,8 @@ export default function DashboardShell({
   const { sessao, clearSessao } = useSessionStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const currentSession = sessao ?? initialSession;
-  const admin = currentSession.role === "ADMIN";
+  const roles = currentSession.roles;
+  const admin = roles.includes("ADMIN");
 
   useLayoutEffect(() => {
     useSessionStore.getState().setSessao(initialSession);
@@ -102,7 +110,7 @@ export default function DashboardShell({
       <aside className="hidden w-60 flex-none flex-col overflow-y-auto border-r border-[#365570] bg-[#233f5c] md:flex">
         <SidebarContent
           sessao={currentSession}
-          admin={admin}
+          roles={roles}
           pathname={pathname}
           onNavigate={(href) => router.push(href)}
           onLogout={handleLogout}
@@ -119,7 +127,7 @@ export default function DashboardShell({
       >
         <SidebarContent
           sessao={currentSession}
-          admin={admin}
+          roles={roles}
           pathname={pathname}
           onNavigate={(href) => router.push(href)}
           onLogout={handleLogout}
@@ -158,7 +166,7 @@ export default function DashboardShell({
               <Avatar nome={currentSession.nome} />
               <div className="hidden min-w-0 lg:block">
                 <p className="max-w-[150px] truncate text-xs font-bold text-slate-800">{currentSession.nome}</p>
-                <p className="text-[11px] text-slate-400">{admin ? "Administrador" : "Professor"}</p>
+                <p className="text-[11px] text-slate-400">{roleLabel(roles)}</p>
               </div>
             </div>
           </div>
@@ -174,19 +182,20 @@ export default function DashboardShell({
 
 function SidebarContent({
   sessao,
-  admin,
+  roles,
   pathname,
   onNavigate,
   onLogout,
   onClose,
 }: {
   sessao: UsuarioSessao | null;
-  admin: boolean;
+  roles: Role[];
   pathname: string;
   onNavigate: (href: string) => void;
   onLogout: () => void;
   onClose?: () => void;
 }) {
+  const admin = roles.includes("ADMIN");
   return (
     <>
       <div className="flex items-center justify-between border-b border-[#365570] px-5 py-5">
@@ -218,19 +227,19 @@ function SidebarContent({
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-6">
         <NavGroup
           label="Principal"
-          items={getVisibleItems(NAV_PRINCIPAL, admin)}
+          items={getVisibleItems(NAV_PRINCIPAL, roles)}
           pathname={pathname}
           onNavigate={onNavigate}
         />
         <NavGroup
           label="Gestão"
-          items={getVisibleItems(NAV_GESTAO, admin)}
+          items={getVisibleItems(NAV_GESTAO, roles)}
           pathname={pathname}
           onNavigate={onNavigate}
         />
         <NavGroup
           label={admin ? "Operação" : "Rotina"}
-          items={getVisibleItems(NAV_MODULOS, admin)}
+          items={getVisibleItems(NAV_MODULOS, roles)}
           pathname={pathname}
           onNavigate={onNavigate}
         />
@@ -241,7 +250,7 @@ function SidebarContent({
           <Avatar nome={sessao?.nome ?? "Sessão"} />
           <div className="min-w-0">
             <p className="truncate text-xs font-bold text-slate-100">{sessao?.nome ?? "Carregando sessão"}</p>
-            <p className="mt-0.5 text-[11px] text-slate-500">{admin ? "Administrador" : "Professor"}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{roleLabel(roles)}</p>
           </div>
         </div>
 

@@ -2,6 +2,12 @@ import { useState, useCallback, useEffect } from "react";
 import { useSessionStore } from "@/store/session";
 import type { Turma } from "@/lib/types";
 
+export interface HorarioInicialTurma {
+  diaSemana: string;
+  horarioInicio: string;
+  horarioFim: string;
+}
+
 export function useTurmas() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +37,22 @@ export function useTurmas() {
     fetchTurmas();
   }, [fetchTurmas]);
 
-  const criar = async (escolaId: string, nome: string, anoLetivo: string, professorId: string | null) => {
+  const criar = async (
+    escolaId: string,
+    nome: string,
+    anoLetivo: string,
+    professorId: string,
+    horarioInicial: HorarioInicialTurma,
+  ) => {
     const res = await fetch("/api/turmas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ escolaId, nome, anoLetivo, professorId }),
+      body: JSON.stringify({ escolaId, nome, anoLetivo, professorId, ...horarioInicial }),
     });
-    if (!res.ok) throw new Error("Erro ao criar turma");
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "Erro ao criar turma");
+    }
     await fetchTurmas();
   };
 

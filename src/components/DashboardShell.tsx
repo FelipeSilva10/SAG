@@ -6,7 +6,7 @@ import { useSessionStore } from "@/store/session";
 import {
   Home, School, Users, GraduationCap, BookUser,
   CalendarDays, ClipboardCheck, BookOpen,
-  Clock, LogOut, ChevronRight, Menu, X,
+  Clock, LogOut, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -145,28 +145,18 @@ export default function DashboardShell({
           </button>
 
           <div className="flex min-w-0 flex-1 items-center gap-2 text-sm">
-            <span className="hidden font-semibold text-[#62798a] sm:inline">Sistema SAG</span>
             {currentItem && (
-              <>
-                <ChevronRight size={15} className="hidden flex-none text-[#d4e1e9] sm:inline" />
-                <span className="truncate font-semibold text-[#45566a]">
-                  {currentItem.label}
-                </span>
-              </>
+              <span className="truncate font-semibold text-[#45566a]">
+                {currentItem.label}
+              </span>
             )}
           </div>
 
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="hidden items-center gap-2 text-xs text-[#62798a] lg:flex">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Ambiente ativo
-            </div>
-            <div className="flex items-center gap-2.5 border-l border-[#e3ebf1] pl-3">
-              <Avatar nome={currentSession.nome} />
-              <div className="hidden min-w-0 lg:block">
-                <p className="max-w-[150px] truncate text-xs font-bold text-[#1f2d3a]">{currentSession.nome}</p>
-                <p className="text-[11px] text-[#8ea0b0]">{roleLabel(roles)}</p>
-              </div>
+          <div className="hidden items-center gap-2.5 sm:flex">
+            <Avatar nome={currentSession.nome} />
+            <div className="hidden min-w-0 lg:block">
+              <p className="max-w-[150px] truncate text-xs font-bold text-[#1f2d3a]">{currentSession.nome}</p>
+              <p className="text-[11px] text-[#8ea0b0]">{roleLabel(roles)}</p>
             </div>
           </div>
         </header>
@@ -205,10 +195,7 @@ function SidebarContent({
           <div className="flex h-10 w-10 flex-none items-center justify-center rounded-md bg-[#e7eef5] text-xs font-black text-[#233f5c]">
             <span className="tracking-tight">SAG</span>
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-bold leading-tight text-white">SAG</p>
-            <p className="mt-0.5 truncate text-[11px] leading-tight text-slate-300">Sistema institucional</p>
-          </div>
+          <p className="truncate text-[15px] font-bold leading-tight text-white">SAG</p>
         </button>
 
         {onClose && (

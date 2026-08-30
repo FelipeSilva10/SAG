@@ -56,22 +56,6 @@ export default function EscolasPage() {
     );
   }, [escolas, busca]);
 
-  const stats = useMemo(() => {
-    let publicas = 0;
-    let privadas = 0;
-
-    for (const escola of escolas) {
-      if (escola.tipo === "PUBLICA") publicas++;
-      else privadas++;
-    }
-
-    return {
-      total: escolas.length,
-      publicas,
-      privadas,
-    };
-  }, [escolas]);
-
   function abrirNova() {
     setFormMode("new");
     setEditTarget(null);
@@ -186,7 +170,6 @@ export default function EscolasPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader
           title="Escolas"
-          subtitle={`${stats.total} escola${stats.total !== 1 ? "s" : ""} · ${stats.publicas} pública${stats.publicas !== 1 ? "s" : ""} · ${stats.privadas} privada${stats.privadas !== 1 ? "s" : ""}`}
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar escola…"
@@ -204,7 +187,6 @@ export default function EscolasPage() {
             <EmptyState
               icon={<School size={22} />}
               title="Nenhuma escola encontrada"
-              message={admin ? 'Clique em "Nova Escola" para começar.' : undefined}
             />
           ) : (
             <Table<Escola>

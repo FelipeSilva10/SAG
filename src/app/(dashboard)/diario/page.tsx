@@ -212,7 +212,6 @@ export default function DiarioPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader
           title="Diário de Aulas"
-          subtitle="Registre o conteúdo e observações de cada aula"
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar título, conteúdo…"
@@ -244,26 +243,17 @@ export default function DiarioPage() {
 
         <div className="flex-1 overflow-auto p-4 sm:p-6">
           {filtrado.length === 0 && !loading ? (
-            <EmptyState
-              icon={<BookOpen size={22} />}
-              title="Nenhuma entrada no diário"
-              message='Clique em "Nova Entrada" para começar.'
-            />
+            <EmptyState icon={<BookOpen size={22} />} title="Nenhuma entrada no diário" />
           ) : (
-            <>
-              <Table<DiarioAula>
-                columns={columns}
-                data={filtrado}
-                rowKey={(e) => e.id}
-                loading={loading}
-                onRowClick={abrirEditar}
-                rowClassName={(e) => (e.observacoes.trim() !== "" ? "bg-amber-50/40" : "")}
-                pageSize={20}
-              />
-              <p className="mt-3 text-xs text-[#8ea0b0]">
-                <span className="text-amber-600">⚠</span> Linha em destaque = entrada com observações
-              </p>
-            </>
+            <Table<DiarioAula>
+              columns={columns}
+              data={filtrado}
+              rowKey={(e) => e.id}
+              loading={loading}
+              onRowClick={abrirEditar}
+              rowClassName={(e) => (e.observacoes.trim() !== "" ? "bg-amber-50/40" : "")}
+              pageSize={20}
+            />
           )}
         </div>
       </div>

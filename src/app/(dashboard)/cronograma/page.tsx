@@ -329,7 +329,6 @@ export default function CronogramaPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader
           title="Cronograma"
-          subtitle={!admin ? `${slots.filter((s) => !["REUNIÃO", "AULA_SUBSTITUTA"].includes(s.tipo)).length} aulas regulares` : undefined}
           actions={
             <>
               {admin && (
@@ -538,8 +537,6 @@ export default function CronogramaPage() {
               placeholder="09:30"
             />
           </div>
-
-          <p className="text-xs text-[#8ea0b0]">Formato: HH:mm</p>
 
           <Button
             onClick={handleSalvar}

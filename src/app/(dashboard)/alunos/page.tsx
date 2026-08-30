@@ -263,7 +263,6 @@ export default function AlunosPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader
           title="Alunos"
-          subtitle={!admin ? "Exibindo apenas alunos das suas turmas" : undefined}
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar aluno, escola…"
@@ -306,10 +305,6 @@ export default function AlunosPage() {
         {formMode === "lote" ? (
           // --- FORMULÁRIO DE LOTE ---
           <div className="space-y-4">
-            <div className="mb-4 rounded-lg bg-[#e8f1f6] p-3 text-xs text-[#1a4b6b]">
-              Cole os nomes, um por linha. O e-mail será gerado automaticamente (ex: analaura@sag.com).
-            </div>
-
             <div className="space-y-1">
               <label className="text-sm font-semibold text-[#45566a]">Nomes (um por linha)</label>
               <textarea
@@ -354,7 +349,7 @@ export default function AlunosPage() {
             <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!admin || formMode === "edit"} />
 
             {admin && (
-              <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} hint={formMode === "edit" ? "A senha atual nunca é exibida." : undefined} />
+              <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} />
             )}
 
             <div className="border-t border-[#e3ebf1] pt-2">

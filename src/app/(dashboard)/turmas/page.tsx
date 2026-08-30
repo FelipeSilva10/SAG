@@ -259,7 +259,6 @@ export default function TurmasPage() {
       <div className="flex flex-1 flex-col overflow-hidden">
         <PageHeader
           title="Turmas"
-          subtitle={admin ? "Organize as turmas por escola, ano letivo e professor responsável." : "Turmas vinculadas a você."}
           searchValue={busca}
           onSearchChange={setBusca}
           searchPlaceholder="Buscar turma, escola ou professor"
@@ -298,7 +297,6 @@ export default function TurmasPage() {
             <EmptyState
               icon={<SearchX size={22} />}
               title={busca || escolaFiltro ? "Nenhuma turma encontrada" : "Você ainda não tem turmas"}
-              message={busca || escolaFiltro ? "Tente remover os filtros ou buscar por outro termo." : "Cadastre a primeira turma para começar a organizar a operação."}
               action={admin && !busca && !escolaFiltro ? <Button size="sm" onClick={abrirNova}><Plus size={14} /> Nova turma</Button> : undefined}
             />
           ) : (
@@ -317,35 +315,24 @@ export default function TurmasPage() {
 
       <SidePanel
         title={formMode === "new" ? "Nova turma" : admin ? "Editar turma" : "Detalhes da turma"}
-        subtitle={formMode === "new" ? "Preencha os dados para criar o vínculo." : "Confira ou atualize as informações cadastradas."}
         open={panelOpen}
         onClose={fecharPanel}
         width="w-80 sm:w-[26rem]"
       >
-        <div className="rounded-md border border-[#d4e1e9] bg-[#f3f7fa] px-4 py-3 text-xs leading-relaxed text-[#1a4b6b]">
-          {admin
-            ? formMode === "new"
-              ? "Defina o professor e o horário para que a turma já seja criada com seu cronograma."
-              : "Atualize os vínculos da turma. Os horários podem ser gerenciados no Cronograma."
-            : "Você está visualizando os dados da turma. Somente administradores podem editar vínculos."}
-        </div>
-        <div className="border-t border-[#e3ebf1] pt-4">
-          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.12em] text-[#62798a]">Informações básicas</p>
-          <div className="space-y-4">
-            <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
-            <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
-            <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin} options={escolas.map((e) => ({ value: e.id, label: e.nome }))} />
-            {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: formMode === "new" ? "Selecione o professor" : "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
-            {admin && formMode === "new" && (
-              <>
-                <Select label="Dia da semana" value={diaSemanaForm} onChange={(e) => setDiaSemanaForm(e.target.value)} options={DIAS_SEMANA_OPCOES} />
-                <div className="grid grid-cols-2 gap-3">
-                  <Input label="Horário de início" type="time" value={horarioInicioForm} onChange={(e) => setHorarioInicioForm(e.target.value)} />
-                  <Input label="Horário de término" type="time" value={horarioFimForm} onChange={(e) => setHorarioFimForm(e.target.value)} />
-                </div>
-              </>
-            )}
-          </div>
+        <div className="space-y-4">
+          <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
+          <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
+          <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin} options={escolas.map((e) => ({ value: e.id, label: e.nome }))} />
+          {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: formMode === "new" ? "Selecione o professor" : "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
+          {admin && formMode === "new" && (
+            <>
+              <Select label="Dia da semana" value={diaSemanaForm} onChange={(e) => setDiaSemanaForm(e.target.value)} options={DIAS_SEMANA_OPCOES} />
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="Horário de início" type="time" value={horarioInicioForm} onChange={(e) => setHorarioInicioForm(e.target.value)} />
+                <Input label="Horário de término" type="time" value={horarioFimForm} onChange={(e) => setHorarioFimForm(e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
         {admin && (
           <div className="space-y-3 border-t border-[#e3ebf1] pt-5">

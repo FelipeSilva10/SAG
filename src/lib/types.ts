@@ -23,6 +23,10 @@ export interface Escola {
   status: string;
   tipo: EscolaTipo;
   tipoLabel: string; // "Pública" | "Privada"
+  dataInicio: string | null;
+  dataFim: string | null;
+  coordenador: string;
+  contato: string;
 }
 
 // ── Turma ──────────────────────────────────────────────────────────────────────
@@ -34,6 +38,100 @@ export interface Turma {
   escolaNome: string;
   professorNome: string;
   professorId: string | null;
+  dataInicio: string | null;
+  dataFim: string | null;
+  totalAulas: number | null;
+  situacao: "ATIVA" | "ENCERRADA";
+  horarios: HorarioTurma[];
+}
+
+export interface HorarioTurma {
+  id?: string;
+  diaSemana: DiaSemana;
+  horarioInicio: string;
+  horarioFim: string;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+}
+
+export type TipoExcecao = "FERIADO" | "CANCELAMENTO" | "REPOSICAO" | "EXTRA" | "ALTERACAO";
+
+export interface ExcecaoCalendario {
+  id: string;
+  turmaId: string;
+  data: string;
+  tipo: TipoExcecao;
+  motivo: string;
+  horarioInicio: string | null;
+  horarioFim: string | null;
+  dataOriginal: string | null;
+}
+
+export interface AulaCalendario {
+  chave: string;
+  turmaId: string;
+  turmaNome: string;
+  escolaId: string;
+  escolaNome: string;
+  professorId: string | null;
+  professorNome: string;
+  data: string;
+  horarioInicio: string | null;
+  horarioFim: string | null;
+  tipo: "AULA" | TipoExcecao;
+  motivo: string;
+  dataOriginal: string | null;
+  cronogramaId: string | null;
+  excecaoId: string | null;
+  chamadaId: string | null;
+  numero: number | null;
+  total: number | null;
+  status: "REALIZADA" | "PENDENTE" | "AGENDADA" | "CANCELADA";
+}
+
+export interface ProgressoCurso {
+  turmaId: string;
+  turmaNome: string;
+  escolaNome: string;
+  realizadas: number;
+  pendentes: number;
+  total: number | null;
+  objetivo: number | null;
+  proxima: AulaCalendario | null;
+}
+
+export interface DadosCalendario {
+  aulas: AulaCalendario[];
+  progresso: ProgressoCurso[];
+}
+
+export interface PresencaRelatorio {
+  chamadaId: string;
+  alunoId: string;
+  alunoNome: string;
+  data: string;
+  presente: boolean;
+}
+
+export interface AlunoRelatorio {
+  id: string;
+  nome: string;
+  presencas: number;
+  faltas: number;
+  aulasRegistradas: number;
+  frequencia: number | null;
+  ultimaPresenca: string | null;
+  dias: Record<string, { presentes: number; faltas: number }>;
+}
+
+export interface RelatorioFrequencia {
+  escola: string;
+  inicio: string | null;
+  fim: string | null;
+  datas: string[];
+  alunos: AlunoRelatorio[];
+  chamadas: number;
+  aulasPendentes: number;
 }
 
 // ── Professor ──────────────────────────────────────────────────────────────────
@@ -54,6 +152,7 @@ export interface Aluno {
   turmaId: string;
   turmaNome: string;
   escolaNome: string;
+  escolaId: string | null;
   accessStatus: string;
   entityStatus: string;
   mustChangeSenha: boolean;
@@ -161,7 +260,7 @@ export interface RegistroHoras {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 export const DIAS_SEMANA: DiaSemana[] = [
-  "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO",
+  "SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO",
 ];
 
 export const ABREV_DIA: Record<DiaSemana, string> = {

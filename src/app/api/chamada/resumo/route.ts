@@ -16,9 +16,6 @@ export async function GET(request: NextRequest) {
     searchParams.get("professorId"),
   );
  
-  if (!professorId) {
-    return NextResponse.json({ error: "professorId obrigatório." }, { status: 400 });
-  }
  
   try {
     const rows = await sql`
@@ -34,9 +31,9 @@ export async function GET(request: NextRequest) {
         ) AS media_presenca
       FROM turmas t
       JOIN escolas e ON e.id = t.escola_id
-      LEFT JOIN chamadas c ON c.turma_id = t.id AND c.professor_id = ${professorId}::uuid
+      LEFT JOIN chamadas c ON c.turma_id = t.id
       LEFT JOIN chamada_presencas cp ON cp.chamada_id = c.id
-      WHERE t.professor_id = ${professorId}::uuid
+      WHERE (${professorId}::uuid IS NULL OR t.professor_id = ${professorId}::uuid)
       GROUP BY t.id, t.nome, e.nome
       ORDER BY t.nome
     `;

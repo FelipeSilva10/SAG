@@ -29,7 +29,7 @@ export function useAlunos() {
     fetchAlunos();
   }, [fetchAlunos]);
 
-  const criar = async (dados: { nome: string; email: string; senha: string; turmaId: string }) => {
+  const criar = async (dados: { nome: string; email: string; senha: string; turmaId: string; entityStatus?: string }, recarregar = true) => {
     const res = await fetch("/api/alunos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,22 +39,24 @@ export function useAlunos() {
       const data = await res.json();
       throw new Error(data.error || "Erro ao criar aluno");
     }
-    await fetchAlunos();
+    const result = await res.json() as { id: string; email: string };
+    if (recarregar) await fetchAlunos();
+    return result;
   };
 
-  const atualizar = async (id: string, dados: { nome: string; email: string; senha: string; turmaId: string }) => {
+  const atualizar = async (id: string, dados: { nome: string; email: string; senha: string; turmaId: string; entityStatus?: string }) => {
     const res = await fetch(`/api/alunos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(dados),
     });
-    if (!res.ok) throw new Error("Erro ao atualizar aluno");
+    if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao atualizar aluno");
     await fetchAlunos();
   };
 
   const excluir = async (id: string) => {
     const res = await fetch(`/api/alunos/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Erro ao excluir aluno");
+    if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao excluir aluno");
     await fetchAlunos();
   };
 

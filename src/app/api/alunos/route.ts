@@ -2,20 +2,23 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { courseFailure } from "@/lib/course-api";
+import { CourseError, textField, uuid } from "@/lib/course-validation";
+import { studentEmail } from "@/lib/student-account";
 import type { Aluno } from "@/lib/types";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import {
   getRequestSession,
   hasRole,
   resolveProfessorId,
+  requireRole,
 } from "@/lib/request-authorization";
 
 const BASE_SELECT = sql`
   SELECT p.id, p.nome, p.email, p.turma_id,
          p.access_status, p.entity_status, p.must_change_senha,
          COALESCE(t.nome, 'Sem Turma') AS turma_nome,
-         COALESCE(e.nome, 'Sem Escola') AS escola_nome
+         e.id AS escola_id, COALESCE(e.nome, 'Sem Escola') AS escola_nome
   FROM perfis p
   LEFT JOIN turmas t ON p.turma_id = t.id
   LEFT JOIN escolas e ON t.escola_id = e.id
@@ -30,6 +33,7 @@ function mapAluno(r: Record<string, unknown>): Aluno {
     turmaId: r.turma_id as string,
     turmaNome: r.turma_nome as string,
     escolaNome: r.escola_nome as string,
+    escolaId: r.escola_id as string | null,
     accessStatus: (r.access_status as string) ?? "ATIVO",
     entityStatus: (r.entity_status as string) ?? "ATIVO",
     mustChangeSenha: Boolean(r.must_change_senha),
@@ -56,7 +60,7 @@ export async function GET(request: NextRequest) {
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
-               COALESCE(e.nome,'Sem Escola') AS escola_nome
+               e.id AS escola_id, COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
         JOIN turmas t ON p.turma_id = t.id
         LEFT JOIN escolas e ON t.escola_id = e.id
@@ -70,7 +74,7 @@ export async function GET(request: NextRequest) {
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
-               COALESCE(e.nome,'Sem Escola') AS escola_nome
+               e.id AS escola_id, COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
         LEFT JOIN turmas t ON p.turma_id = t.id
         LEFT JOIN escolas e ON t.escola_id = e.id
@@ -82,7 +86,7 @@ export async function GET(request: NextRequest) {
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
-               COALESCE(e.nome,'Sem Escola') AS escola_nome
+               e.id AS escola_id, COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
         JOIN turmas t ON p.turma_id = t.id
         LEFT JOIN escolas e ON t.escola_id = e.id
@@ -94,7 +98,7 @@ export async function GET(request: NextRequest) {
         SELECT p.id, p.nome, p.email, p.turma_id,
                p.access_status, p.entity_status, p.must_change_senha,
                COALESCE(t.nome,'Sem Turma') AS turma_nome,
-               COALESCE(e.nome,'Sem Escola') AS escola_nome
+               e.id AS escola_id, COALESCE(e.nome,'Sem Escola') AS escola_nome
         FROM perfis p
         LEFT JOIN turmas t ON p.turma_id = t.id
         LEFT JOIN escolas e ON t.escola_id = e.id
@@ -110,59 +114,34 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/alunos — cria usuário no Supabase Auth + insere em perfis
+// O mesmo Supabase Auth usado pelo Bloquin recebe a senha; ela não é salva em perfis.
 export async function POST(request: NextRequest) {
+  const session = requireRole(request, "ADMIN");
+  if (session instanceof NextResponse) return session;
   try {
-    const { nome, email, senha, turmaId } = await request.json();
-
-    if (!nome?.trim() || !email?.trim() || !senha || !turmaId) {
-      return NextResponse.json({ error: "Todos os campos são obrigatórios." }, { status: 400 });
-    }
-    if (senha.length < 6) {
-      return NextResponse.json({ error: "Senha mínima de 6 caracteres." }, { status: 400 });
-    }
-
-    // 1. Cria no Supabase Auth (equivalente ao SupabaseAuthDAO.criarUsuarioAuth)
+    const body = await request.json();
+    const nome = textField(body.nome, "Nome do aluno");
+    const email = studentEmail(body.email);
+    const turmaId = uuid(body.turmaId, "Turma");
+    const senha = body.senha;
+    if (typeof senha !== "string" || senha.length < 6 || senha.length > 128) throw new CourseError("A senha deve ter de 6 a 128 caracteres.");
+    const [turma] = await sql`select id, situacao_curso from turmas where id = ${turmaId}::uuid`;
+    if (!turma || turma.situacao_curso !== "ATIVA") throw new CourseError("Escolha uma turma ativa.");
     const admin = getSupabaseAdmin();
-    const { data: authData, error: authError } = await admin.auth.admin.createUser({
-      email: email.trim(),
-      password: senha,
-      email_confirm: true,
-    });
-
-    if (authError || !authData.user) {
-      return NextResponse.json(
-        { error: authError?.message ?? "E-mail já cadastrado no sistema." },
-        { status: 422 }
-      );
-    }
-
-    const authId = authData.user.id;
-
-    // 2. Insere em perfis
+    const { data, error } = await admin.auth.admin.createUser({ email, password: senha, email_confirm: true });
+    if (error || !data.user) return NextResponse.json({ error: error?.message ?? "Não foi possível criar a conta." }, { status: 422 });
+    const id = data.user.id;
     try {
-      await sql`
-        INSERT INTO perfis (id, nome, email, senha, role, turma_id)
-        VALUES (${authId}::uuid, ${nome.trim()}, ${email.trim()}, ${senha}, 'student', ${turmaId}::uuid)
-        ON CONFLICT (id) DO UPDATE
-          SET nome = EXCLUDED.nome, email = EXCLUDED.email,
-              senha = EXCLUDED.senha, turma_id = EXCLUDED.turma_id
-      `;
-
-      await sql`
-        INSERT INTO membros_turma (turma_id, utilizador_id)
-        VALUES (${turmaId}::uuid, ${authId}::uuid)
-        ON CONFLICT (turma_id, utilizador_id) DO NOTHING
-      `;
+      await sql.begin(async tx => {
+        await tx`insert into perfis (id, nome, email, role, turma_id)
+          values (${id}::uuid, ${nome}, ${email}, 'student', ${turmaId}::uuid)
+          on conflict (id) do update set nome = excluded.nome, email = excluded.email, role = 'student', turma_id = excluded.turma_id`;
+        await tx`insert into membros_turma (turma_id, utilizador_id) values (${turmaId}::uuid, ${id}::uuid) on conflict do nothing`;
+      });
     } catch (dbError) {
-      // Rollback: remove do Auth se o insert no banco falhou
-      await admin.auth.admin.deleteUser(authId);
+      await admin.auth.admin.deleteUser(id);
       throw dbError;
     }
-
-    return NextResponse.json({ ok: true }, { status: 201 });
-  } catch (error) {
-    console.error("[POST /api/alunos]", error);
-    return NextResponse.json({ error: "Erro ao cadastrar aluno." }, { status: 500 });
-  }
+    return NextResponse.json({ ok: true, id, email }, { status: 201 });
+  } catch (error) { return courseFailure(error, "[POST aluno]"); }
 }

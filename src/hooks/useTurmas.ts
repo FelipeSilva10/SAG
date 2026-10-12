@@ -2,11 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useSessionStore } from "@/store/session";
 import type { Turma } from "@/lib/types";
 
-export interface HorarioInicialTurma {
-  diaSemana: string;
-  horarioInicio: string;
-  horarioFim: string;
-}
+export type DadosTurma = Pick<Turma, "escolaId" | "nome" | "anoLetivo" | "professorId" | "dataInicio" | "dataFim" | "totalAulas" | "situacao" | "horarios">;
 
 export function useTurmas() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -37,40 +33,21 @@ export function useTurmas() {
     fetchTurmas();
   }, [fetchTurmas]);
 
-  const criar = async (
-    escolaId: string,
-    nome: string,
-    anoLetivo: string,
-    professorId: string,
-    horarioInicial: HorarioInicialTurma,
-  ) => {
-    const res = await fetch("/api/turmas", {
-      method: "POST",
+  const salvar = async (dados: DadosTurma, id?: string) => {
+    const res = await fetch(id ? `/api/turmas/${id}` : "/api/turmas", {
+      method: id ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ escolaId, nome, anoLetivo, professorId, ...horarioInicial }),
+      body: JSON.stringify(dados),
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error ?? "Erro ao criar turma");
-    }
-    await fetchTurmas();
-  };
-
-  const atualizar = async (id: string, escolaId: string, nome: string, anoLetivo: string, professorId: string | null) => {
-    const res = await fetch(`/api/turmas/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ escolaId, nome, anoLetivo, professorId }),
-    });
-    if (!res.ok) throw new Error("Erro ao atualizar turma");
+    if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao salvar turma");
     await fetchTurmas();
   };
 
   const excluir = async (id: string) => {
     const res = await fetch(`/api/turmas/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Erro ao excluir turma");
+    if (!res.ok) throw new Error((await res.json()).error ?? "Erro ao excluir turma");
     await fetchTurmas();
   };
 
-  return { turmas, loading, fetchTurmas, criar, atualizar, excluir };
+  return { turmas, loading, fetchTurmas, salvar, excluir };
 }

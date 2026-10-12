@@ -3,6 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { Chamada, ChamadaPresenca } from "@/lib/types";
+import { loadCalendar } from "@/lib/course-data";
+import { isTeachingDay, todayInSaoPaulo } from "@/lib/course-calendar";
+import { CourseError, dateField, times, uuid } from "@/lib/course-validation";
+import { courseFailure } from "@/lib/course-api";
 import {
   getRequestSession,
   hasRole,
@@ -21,10 +25,6 @@ export async function GET(request: NextRequest) {
     searchParams.get("professorId"),
   );
 
-  if (!professorId) {
-    return NextResponse.json({ error: "professorId é obrigatório." }, { status: 400 });
-  }
-
   try {
     const rows = await sql`
       SELECT c.id, c.professor_id, c.turma_id, t.nome AS turma_nome,
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       FROM chamadas c
       JOIN turmas t ON t.id = c.turma_id
       LEFT JOIN chamada_presencas cp ON cp.chamada_id = c.id
-      WHERE c.professor_id = ${professorId}::uuid
+      WHERE (${professorId}::uuid IS NULL OR c.professor_id = ${professorId}::uuid)
       GROUP BY c.id, t.nome
       ORDER BY c.data_aula DESC, c.horario_inicio
     `;
@@ -62,93 +62,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/chamada — abre nova chamada com presenças (transação)
+// Um registro por turma e data, com todos os alunos atuais e transação completa.
 export async function POST(request: NextRequest) {
+  const session = getRequestSession(request);
+  if (!session) return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
   try {
-    const session = getRequestSession(request);
-    if (!session) {
-      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
-    }
-
-    const { professorId: requestedProfessorId, turmaId, cronogramaId, dataAula, horarioInicio, horarioFim, presencas } =
-      await request.json() as {
-        professorId: string;
-        turmaId: string;
-        cronogramaId: string | null;
-        dataAula: string;
-        horarioInicio: string;
-        horarioFim: string;
-        presencas: ChamadaPresenca[];
-      };
-    const professorId = resolveProfessorId(session, requestedProfessorId);
-    if (!professorId) {
-      return NextResponse.json({ error: "Professor é obrigatório." }, { status: 400 });
-    }
-
-    if (!hasRole(session.actor, "ADMIN")) {
-      const ownedClass = await sql`
-        SELECT 1
-        FROM turmas
-        WHERE id = ${turmaId}::uuid
-          AND professor_id = ${session.actor.id}::uuid
-        LIMIT 1
-      `;
-      if (ownedClass.length === 0) {
-        return NextResponse.json(
-          { error: "Turma não autorizada." },
-          { status: 403 },
-        );
-      }
-    }
-
-    // Verifica duplicata
-    const existe = await sql`
-      SELECT 1 FROM chamadas
-      WHERE professor_id = ${professorId}::uuid
-        AND turma_id = ${turmaId}::uuid
-        AND data_aula = ${dataAula}::date
-      LIMIT 1
-    `;
-
-    if (existe.length > 0) {
-      return NextResponse.json(
-        { error: "Chamada já registrada para esta turma nesta data." },
-        { status: 409 }
-      );
-    }
-
-// Insere chamada e presenças em transação
-    await sql.begin(async (tx: any) => {
-      const [chamada] = await tx`
-        INSERT INTO chamadas
-          (professor_id, turma_id, cronograma_id, data_aula, horario_inicio, horario_fim)
-        VALUES (
-          ${professorId}::uuid,
-          ${turmaId}::uuid,
-          ${cronogramaId ?? null}::uuid,
-          ${dataAula}::date,
-          ${horarioInicio}::time,
-          ${horarioFim}::time
-        )
-        RETURNING id
-      `;
-
-      const chamadaId = chamada.id as string;
-
-      for (const p of presencas) {
-        await tx`
-          INSERT INTO chamada_presencas (chamada_id, aluno_id, presente)
-          VALUES (${chamadaId}::uuid, ${p.alunoId}::uuid, ${p.presente})
-          ON CONFLICT (chamada_id, aluno_id) DO UPDATE SET presente = EXCLUDED.presente
-        `;
-      }
-
-      return chamadaId;
+    const body = await request.json();
+    const turmaId = uuid(body.turmaId, "Turma");
+    const dataAula = dateField(body.dataAula, "Data da aula");
+    if (!dataAula) throw new CourseError("Informe a data da aula.");
+    if (dataAula > todayInSaoPaulo()) throw new CourseError("A chamada só pode ser registrada até a data de hoje.");
+    if (!Array.isArray(body.presencas) || !body.presencas.length || body.presencas.length > 2000) throw new CourseError("Carregue os alunos antes de salvar a chamada.");
+    const seen = new Set<string>();
+    const presencas: { alunoId: string; presente: boolean }[] = body.presencas.map((p: ChamadaPresenca) => {
+      const alunoId = uuid(p?.alunoId, "Aluno");
+      if (typeof p.presente !== "boolean" || seen.has(alunoId)) throw new CourseError("Presenças inválidas ou aluno repetido.");
+      seen.add(alunoId);
+      return { alunoId, presente: p.presente };
     });
-
-    return NextResponse.json({ ok: true }, { status: 201 });
-  } catch (error) {
-    console.error("[POST /api/chamada]", error);
-    return NextResponse.json({ error: "Erro ao salvar chamada." }, { status: 500 });
-  }
+    const id = await sql.begin(async tx => {
+      const [turma] = await tx`select id, professor_id from turmas where id = ${turmaId}::uuid
+        and (${hasRole(session.actor, "ADMIN")} or professor_id = ${session.actor.id}::uuid) for update`;
+      if (!turma) throw new CourseError("Turma não encontrada ou não autorizada.", 404);
+      if (!turma.professor_id) throw new CourseError("Atribua um professor à turma.");
+      const [existing] = await tx`select id from chamadas where turma_id = ${turmaId}::uuid and data_aula = ${dataAula}::date`;
+      if (existing) throw new CourseError("Chamada já registrada para esta turma e data. Consulte o histórico.", 409);
+      const calendar = await loadCalendar({ professorId: null, turmaId }, dataAula, dataAula);
+      const aula = calendar.aulas.find(a => a.data === dataAula);
+      if (!aula || !isTeachingDay(aula)) throw new CourseError("Não há aula nesta data. Confira o calendário ou cadastre uma aula extra/reposição.", 409);
+      const horario = times(aula.horarioInicio, aula.horarioFim);
+      const students = await tx`select id from perfis where turma_id = ${turmaId}::uuid and role = 'student' and entity_status = 'ATIVO'`;
+      if (students.length !== seen.size || students.some(s => !seen.has(s.id))) throw new CourseError("A lista de alunos mudou ou contém alunos de outra turma. Carregue os alunos novamente.", 409);
+      const [call] = await tx`insert into chamadas (professor_id, turma_id, cronograma_id, data_aula, horario_inicio, horario_fim)
+        values (${turma.professor_id}::uuid, ${turmaId}::uuid, ${aula.cronogramaId}::uuid, ${dataAula}::date,
+          ${horario.horarioInicio}::time, ${horario.horarioFim}::time) returning id`;
+      const records = presencas.map(p => ({ chamada_id: call.id, aluno_id: p.alunoId, presente: p.presente }));
+      await tx`insert into chamada_presencas ${tx(records, 'chamada_id', 'aluno_id', 'presente')}`;
+      return call.id;
+    });
+    return NextResponse.json({ ok: true, id }, { status: 201 });
+  } catch (error) { return courseFailure(error, "[POST chamada]"); }
 }

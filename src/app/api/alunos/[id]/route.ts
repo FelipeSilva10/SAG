@@ -1,116 +1,63 @@
-// src/app/api/alunos/[id]/route.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// BUG CORRIGIDO (PATCH): a versão anterior atualizava apenas a tabela `perfis`
-// e ignorava o Supabase Auth. Isso fazia com que a nova senha salva no SAG
-// não funcionasse no Bloquin — o aluno continuava com a senha antiga no Auth.
-//
-// Agora o PATCH atualiza em dois lugares de forma atômica:
-//  1. Supabase Auth  → auth.users (via admin.auth.admin.updateUserById)
-//  2. Tabela perfis  → campos nome, email, senha, turma_id
-//
-// Se o Auth falhar, o banco não é tocado (fail-fast).
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { requireRole } from "@/lib/request-authorization";
+import { CourseError, textField, uuid } from "@/lib/course-validation";
+import { courseFailure } from "@/lib/course-api";
+import { studentEmail } from "@/lib/student-account";
 
-// ── PATCH /api/alunos/[id] — atualiza nome, senha e turma ────────────────────
-
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = requireRole(request, "ADMIN");
   if (session instanceof NextResponse) return session;
-
+  let passwordChanged = false;
   try {
-    const { id } = await params;
-    const { nome, email, senha, turmaId } = await request.json();
-
-    if (!nome?.trim() || !email?.trim() || !turmaId) {
-      return NextResponse.json({ error: "Campos incompletos." }, { status: 400 });
-    }
-    if (senha && senha.length < 6) {
-      return NextResponse.json(
-        { error: "Senha mínima de 6 caracteres." },
-        { status: 400 }
-      );
-    }
-
+    const id = uuid((await params).id);
+    const body = await request.json();
+    const nome = textField(body.nome, "Nome do aluno");
+    const email = studentEmail(body.email);
+    const turmaId = uuid(body.turmaId, "Turma");
+    const senha = body.senha;
+    if (senha && (typeof senha !== "string" || senha.length < 6 || senha.length > 128)) throw new CourseError("A senha deve ter de 6 a 128 caracteres.");
+    const [current] = await sql`select id, email, entity_status from perfis where id = ${id}::uuid and role = 'student'`;
+    if (!current) throw new CourseError("Aluno não encontrado.", 404);
+    const entityStatus = body.entityStatus ?? current.entity_status;
+    if (!["ATIVO", "INATIVO", "ENCERRADO"].includes(entityStatus)) throw new CourseError("Situação da matrícula inválida.");
+    if (email !== current.email?.toLowerCase()) throw new CourseError("O login desta conta é fixo. Altere apenas nome, senha ou turma.");
+    const [destination] = await sql`select id, situacao_curso from turmas where id = ${turmaId}::uuid`;
+    if (!destination) throw new CourseError("Turma não encontrada.");
     if (senha) {
-      const admin = getSupabaseAdmin();
-      const { error: authError } = await admin.auth.admin.updateUserById(id, { password: senha });
-      if (authError) {
-        console.error("[PATCH /api/alunos] Auth error:", authError);
-        return NextResponse.json(
-          { error: `Falha ao atualizar no Auth: ${authError.message}` },
-          { status: 500 }
-        );
-      }
+      const { error } = await getSupabaseAdmin().auth.admin.updateUserById(id, { password: senha });
+      if (error) throw new CourseError(error.message, 422);
+      passwordChanged = true;
     }
-
-    // ── 2. Atualiza na tabela perfis ──────────────────────────────────────────
-    await sql`
-      UPDATE perfis
-      SET nome     = ${nome.trim()},
-          email    = ${email.trim()},
-          senha    = COALESCE(${senha || null}, senha),
-          turma_id = ${turmaId}::uuid,
-          updated_at = now()
-      WHERE id = ${id}::uuid
-        AND role = 'student'
-    `;
-
-    await sql`
-      DELETE FROM membros_turma
-      WHERE utilizador_id = ${id}::uuid
-    `;
-
-    await sql`
-      INSERT INTO membros_turma (turma_id, utilizador_id)
-      VALUES (${turmaId}::uuid, ${id}::uuid)
-      ON CONFLICT (turma_id, utilizador_id) DO NOTHING
-    `;
-
+    await sql.begin(async tx => {
+      const [student] = await tx`select turma_id from perfis where id = ${id}::uuid and role = 'student' for update`;
+      if (!student) throw new CourseError("Aluno não encontrado.", 404);
+      await tx`update perfis set nome = ${nome}, turma_id = ${turmaId}::uuid, entity_status = ${entityStatus}::entity_status,
+        senha = case when ${passwordChanged} then null else senha end, updated_at = now() where id = ${id}::uuid`;
+      // Retira apenas o vínculo principal anterior; outras participações são preservadas.
+      if (student.turma_id && student.turma_id !== turmaId) await tx`delete from membros_turma where utilizador_id = ${id}::uuid and turma_id = ${student.turma_id}::uuid`;
+      await tx`insert into membros_turma (turma_id, utilizador_id) values (${turmaId}::uuid, ${id}::uuid) on conflict do nothing`;
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[PATCH /api/alunos/[id]]", error);
-    return NextResponse.json({ error: "Erro ao atualizar aluno." }, { status: 500 });
+    if (passwordChanged) return NextResponse.json({ error: "A senha foi atualizada no Bloquin, mas os dados do aluno não puderam ser salvos. Recarregue e salve os dados novamente." }, { status: 500 });
+    return courseFailure(error, "[PATCH aluno]");
   }
 }
 
-// ── DELETE /api/alunos/[id] — remove do Auth e do banco ──────────────────────
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = requireRole(request, "ADMIN");
   if (session instanceof NextResponse) return session;
-
   try {
-    const { id } = await params;
-    const admin = getSupabaseAdmin();
-
-    // 1. Remove do Supabase Auth (cascata apaga perfis se FK configurada,
-    //    mas fazemos explicitamente para garantir)
-    const { error: authError } = await admin.auth.admin.deleteUser(id);
-    if (authError) {
-      console.error("[DELETE /api/alunos] Auth error:", authError);
-      return NextResponse.json(
-        { error: "Falha ao remover do Auth." },
-        { status: 500 }
-      );
-    }
-
-    // 2. Remove da tabela perfis (caso não haja ON DELETE CASCADE no FK)
-    await sql`DELETE FROM perfis WHERE id = ${id}::uuid`;
-
+    const id = uuid((await params).id);
+    const [student] = await sql`select id from perfis where id = ${id}::uuid and role = 'student'`;
+    if (!student) throw new CourseError("Aluno não encontrado.", 404);
+    const recorded = await sql`select 1 from chamada_presencas where aluno_id = ${id}::uuid limit 1`;
+    if (recorded.length) throw new CourseError("Este aluno tem presenças registradas. Mantenha a conta para preservar os relatórios do curso.", 409);
+    const { error } = await getSupabaseAdmin().auth.admin.deleteUser(id);
+    if (error) throw new CourseError("Não foi possível remover a conta do Bloquin.", 422);
+    await sql`delete from perfis where id = ${id}::uuid and role = 'student'`;
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[DELETE /api/alunos/[id]]", error);
-    return NextResponse.json({ error: "Erro ao excluir aluno." }, { status: 500 });
-  }
+  } catch (error) { return courseFailure(error, "[DELETE aluno]"); }
 }

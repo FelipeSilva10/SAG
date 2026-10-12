@@ -18,7 +18,8 @@ export function useEscolas() {
         : `/api/escolas?professorId=${sessao?.id}`;
       const res = await fetch(url);
       const data = await res.json();
-      setEscolas(data);
+      if (!res.ok) throw new Error(data.error);
+      setEscolas(Array.isArray(data) ? data : []);
     } catch {
       toast.error("Erro ao carregar escolas.");
     } finally {
@@ -28,21 +29,21 @@ export function useEscolas() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  async function criar(nome: string, tipo: string) {
+  async function criar(nome: string, tipo: string, extra?: Partial<Escola>) {
     const res = await fetch("/api/escolas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, tipo }),
+      body: JSON.stringify({ nome, tipo, ...extra }),
     });
     if (!res.ok) throw new Error((await res.json()).error);
     await carregar();
   }
 
-  async function atualizar(id: string, nome: string, tipo: string) {
+  async function atualizar(id: string, nome: string, tipo: string, extra?: Partial<Escola>) {
     const res = await fetch(`/api/escolas/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, tipo }),
+      body: JSON.stringify({ nome, tipo, ...extra }),
     });
     if (!res.ok) throw new Error((await res.json()).error);
     await carregar();

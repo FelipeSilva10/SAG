@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Trash2, Pencil, School } from "lucide-react";
+import { Plus, Trash2, Pencil, School, FileDown } from "lucide-react";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
 import {
@@ -18,6 +18,9 @@ import {
 } from "@/components/ui";
 import type { Escola } from "@/lib/types";
 import toast from "react-hot-toast";
+import { formatDate } from "@/lib/utils";
+import { todayInSaoPaulo } from "@/lib/course-calendar";
+import { useRouter } from "next/navigation";
 
 type FormMode = "new" | "edit";
 
@@ -25,6 +28,7 @@ export default function EscolasPage() {
   const { escolas, loading, criar, atualizar, excluir } = useEscolas();
   const { isAdmin } = useSessionStore();
   const confirm = useConfirmDialog();
+  const router = useRouter();
 
   const admin = useMemo(() => isAdmin(), [isAdmin]);
 
@@ -36,6 +40,10 @@ export default function EscolasPage() {
   // Form state
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState<"PUBLICA" | "PRIVADA">("PUBLICA");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [coordenador, setCoordenador] = useState("");
+  const [contato, setContato] = useState("");
   const [saving, setSaving] = useState(false);
 
   const escolasFiltradas = useMemo(() => {
@@ -61,6 +69,7 @@ export default function EscolasPage() {
     setEditTarget(null);
     setNome("");
     setTipo("PUBLICA");
+    setDataInicio(todayInSaoPaulo()); setDataFim(""); setCoordenador(""); setContato("");
     setPanelOpen(true);
   }
 
@@ -69,6 +78,8 @@ export default function EscolasPage() {
     setEditTarget(escola);
     setNome(escola.nome);
     setTipo(escola.tipo);
+    setDataInicio(escola.dataInicio ?? ""); setDataFim(escola.dataFim ?? "");
+    setCoordenador(escola.coordenador); setContato(escola.contato);
     setPanelOpen(true);
   }
 
@@ -80,10 +91,10 @@ export default function EscolasPage() {
     setSaving(true);
     try {
       if (formMode === "new") {
-        await criar(nome.trim(), tipo);
+        await criar(nome.trim(), tipo, { dataInicio: dataInicio || null, dataFim: dataFim || null, coordenador, contato });
         toast.success("Escola cadastrada com sucesso!");
       } else if (editTarget) {
-        await atualizar(editTarget.id, nome.trim(), tipo);
+        await atualizar(editTarget.id, nome.trim(), tipo, { dataInicio: dataInicio || null, dataFim: dataFim || null, coordenador, contato });
         toast.success("Escola atualizada!");
       }
       setPanelOpen(false);
@@ -97,7 +108,7 @@ export default function EscolasPage() {
   async function handleExcluir(escola: Escola) {
     const ok = await confirm({
       title: "Excluir escola",
-      description: `Excluir a escola "${escola.nome}"? Esta ação removerá todas as turmas vinculadas.`,
+      description: `Excluir a escola "${escola.nome}"? Apenas escolas sem turmas podem ser excluídas.`,
       confirmLabel: "Excluir",
       danger: true,
     });
@@ -136,6 +147,9 @@ export default function EscolasPage() {
         </Badge>
       ),
     },
+    { key: "periodo", header: "Período", render: e => <span>{formatDate(e.dataInicio)} → {e.dataFim ? formatDate(e.dataFim) : "Contínuo"}</span> },
+    { key: "coordenador", header: "Coordenação", render: e => <div><p>{e.coordenador || "—"}</p><p className="text-xs text-[#62798a]">{e.contato}</p></div> },
+    { key: "relatorio", header: "", render: e => <Button size="sm" variant="secondary" onClick={event => { event.stopPropagation(); router.push(`/relatorios?escolaId=${e.id}`); }}><FileDown size={14} /> Frequência</Button> },
     ...(admin
       ? [
           {
@@ -227,6 +241,13 @@ export default function EscolasPage() {
             ]}
           />
 
+          <div className="grid grid-cols-2 gap-3">
+            <Input type="date" label="Início na escola" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+            <Input type="date" label="Término (opcional)" value={dataFim} min={dataInicio || undefined} onChange={e => setDataFim(e.target.value)} />
+          </div>
+          <p className="text-xs text-[#62798a]">Deixe o término em branco se o trabalho na escola for contínuo.</p>
+          <Input label="Coordenador(a)" value={coordenador} onChange={e => setCoordenador(e.target.value)} />
+          <Input label="Contato da coordenação" value={contato} onChange={e => setContato(e.target.value)} placeholder="E-mail ou telefone" />
           <div className="pt-2">
             <Button
               onClick={handleSalvar}

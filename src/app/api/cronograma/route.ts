@@ -2,6 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
+import { CourseError, dateField, period, times, uuid } from "@/lib/course-validation";
+import { courseFailure } from "@/lib/course-api";
 import type { CronogramaAula } from "@/lib/types";
 import {
   getRequestSession,
@@ -130,23 +132,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await sql`
-      INSERT INTO cronograma_aulas
-        (professor_id, turma_id, dia_semana, horario_inicio, horario_fim,
-         tipo, data_inicio, data_fim, criado_por)
-      VALUES (
-        ${professorId}::uuid, ${turmaId}::uuid, ${diaSemana},
-        ${horarioInicio}::time, ${horarioFim}::time,
-        ${tipo ?? "AULA"},
-        ${dataInicio ?? null}::date,
-        ${dataFim ?? null}::date,
-        ${hasRole(session.actor, "ADMIN") ? "ADMIN" : "PROFESSOR"}
-      )
-    `;
+    uuid(turmaId, "Turma"); uuid(professorId, "Professor");
+    if (!["SEGUNDA", "TERÇA", "QUARTA", "QUINTA", "SEXTA", "SÁBADO", "DOMINGO"].includes(diaSemana)) throw new CourseError("Dia da semana inválido.");
+    if (tipo && !["AULA", "REUNIÃO", "AULA_SUBSTITUTA"].includes(tipo)) throw new CourseError("Tipo de horário inválido.");
+    times(horarioInicio, horarioFim);
+    const inicio = dateField(dataInicio, "Início"); const fim = dateField(dataFim, "Término"); period(inicio, fim);
+    await sql.begin(async tx => {
+      const [turma] = await tx`select id, professor_id, situacao_curso from turmas where id = ${turmaId}::uuid for update`;
+      if (!turma || turma.professor_id !== professorId) throw new CourseError("O professor deve ser o responsável pela turma.");
+      if (turma.situacao_curso === "ENCERRADA") throw new CourseError("Reabra o curso antes de alterar os horários.", 409);
+      if ((tipo ?? "AULA") !== "REUNIÃO") {
+        const existing = await tx`select 1 from cronograma_aulas where turma_id = ${turmaId}::uuid and dia_semana = ${diaSemana} and tipo <> 'REUNIÃO' limit 1`;
+        if (existing.length) throw new CourseError("Já há aula neste dia. Edite os dias e horários no cadastro da turma.", 409);
+      }
+      await tx`insert into cronograma_aulas (professor_id, turma_id, dia_semana, horario_inicio, horario_fim, tipo, data_inicio, data_fim, criado_por)
+        values (${professorId}::uuid, ${turmaId}::uuid, ${diaSemana}, ${horarioInicio}::time, ${horarioFim}::time,
+          ${tipo ?? "AULA"}, ${inicio}::date, ${fim}::date, ${hasRole(session.actor, "ADMIN") ? "ADMIN" : "PROFESSOR"})`;
+    });
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (error) {
-    console.error("[POST /api/cronograma]", error);
-    return NextResponse.json({ error: "Erro ao criar horário." }, { status: 500 });
+    return courseFailure(error, "[POST cronograma]");
   }
 }

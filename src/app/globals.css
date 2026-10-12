@@ -183,3 +183,15 @@
   max-width: 100vw;
   overflow-x: hidden;
 }
+
+@media print {
+  @page { size: landscape; margin: 12mm; }
+  .sag-shell { display: block !important; height: auto !important; overflow: visible !important; background: white !important; }
+  .sag-shell > aside, .sag-shell header, .print-hidden { display: none !important; }
+  .sag-shell > div, .sag-main, .report-page, .report-content, .report-table { height: auto !important; max-height: none !important; overflow: visible !important; background: white !important; }
+  .sag-main table { min-width: 0 !important; font-size: 9px; }
+  .sag-main thead th { position: static !important; }
+  .report-table td, .report-table th { padding: 4px !important; min-width: 0 !important; }
+  .report-table thead { display: table-header-group; }
+  .report-table tr { break-inside: avoid; }
+}

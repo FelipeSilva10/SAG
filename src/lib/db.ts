@@ -31,7 +31,7 @@ function createConnection() {
     max: 10,
     idle_timeout: 30,
     connect_timeout: 15,
-    ssl: "require",
+    ssl: process.env.DB_SSL === "disable" ? false : "require",
     prepare: false,
   });
 }

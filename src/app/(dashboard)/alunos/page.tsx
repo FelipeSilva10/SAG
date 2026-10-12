@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Trash2, Users, UserPlus } from "lucide-react";
+import { Download, Plus, Trash2, Users, UserPlus } from "lucide-react";
 import { useAlunos } from "@/hooks/useAlunos";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import type { Aluno, Turma } from "@/lib/types";
 import toast from "react-hot-toast";
+import { csvCell } from "@/lib/attendance-report";
 
 type FormMode = "new" | "edit" | "lote";
 
@@ -42,6 +43,9 @@ export default function AlunosPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [entityStatus, setEntityStatus] = useState("ATIVO");
+  const [credenciais, setCredenciais] = useState<{ nome: string; email: string; senha: string }[]>([]);
+  const [loteConcluido, setLoteConcluido] = useState(0);
   const [turmaIdForm, setTurmaIdForm] = useState("");
 
   // Estados Form Lote
@@ -49,18 +53,25 @@ export default function AlunosPage() {
   const [previewLote, setPreviewLote] = useState<{ nome: string; email: string; conflito: boolean }[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Busca turmas quando a escola selecionada no form muda
   useEffect(() => {
+    const controller = new AbortController();
+    setTurmasDisponiveis([]);
     if (escolaIdForm) {
-      fetch(`/api/turmas?escolaId=${escolaIdForm}`)
-        .then(res => res.json())
-        .then(setTurmasDisponiveis)
-        .catch(console.error);
-    } else {
-      setTurmasDisponiveis([]);
-      setTurmaIdForm("");
+      fetch(`/api/turmas?escolaId=${escolaIdForm}`, { signal: controller.signal }).then(async res => {
+        const rows = await res.json();
+        if (!res.ok) throw new Error(rows.error);
+        setTurmasDisponiveis(rows);
+      }).catch(err => { if (err.name !== "AbortError") toast.error(err.message); });
     }
+    return () => controller.abort();
   }, [escolaIdForm]);
+
+  function baixarAcessos() {
+    const csv = "\uFEFF" + [["Aluno", "Login no Bloquin", "Senha inicial"], ...credenciais.map(c => [c.nome, c.email, c.senha])].map(row => row.map(csvCell).join(";")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "acessos-bloquin.csv"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   const alunosFiltrados = useMemo(() => {
     const t = busca.trim().toLowerCase();
@@ -76,7 +87,7 @@ export default function AlunosPage() {
   function abrirNovo() {
     setFormMode("new");
     setEditTarget(null);
-    setNome(""); setEmail(""); setSenha("");
+    setNome(""); setEmail(""); setSenha(""); setEntityStatus("ATIVO");
     setEscolaIdForm(""); setTurmaIdForm("");
     setPanelOpen(true);
   }
@@ -89,12 +100,9 @@ export default function AlunosPage() {
     // A API nunca devolve a senha. Campo vazio na edição mantém a atual.
     setSenha("");
 
-    // Auto-seleciona escola baseada no aluno para carregar turmas
-    const escolaMatch = escolas.find(e => e.nome === aluno.escolaNome);
-    if (escolaMatch) {
-      setEscolaIdForm(escolaMatch.id);
-      setTimeout(() => setTurmaIdForm(aluno.turmaId), 200); // Espera as turmas carregarem
-    }
+    setEntityStatus(aluno.entityStatus);
+    setEscolaIdForm(aluno.escolaId ?? "");
+    setTurmaIdForm(aluno.turmaId ?? "");
     setPanelOpen(true);
   }
 
@@ -118,10 +126,11 @@ export default function AlunosPage() {
     setSaving(true);
     try {
       if (formMode === "new") {
-        await criar({ nome, email, senha, turmaId: turmaIdForm });
+        const created = await criar({ nome, email, senha, turmaId: turmaIdForm });
+        setCredenciais(old => [...old, { nome, email: created.email, senha }]);
         toast.success("Aluno cadastrado com sucesso!");
       } else if (editTarget) {
-        await atualizar(editTarget.id, { nome, email, senha, turmaId: turmaIdForm });
+        await atualizar(editTarget.id, { nome, email, senha, turmaId: turmaIdForm, entityStatus });
         toast.success("Aluno atualizado!");
       }
       setPanelOpen(false);
@@ -135,7 +144,7 @@ export default function AlunosPage() {
   async function handleExcluir(aluno: Aluno) {
     const ok = await confirm({
       title: "Excluir aluno",
-      description: `Excluir o aluno "${aluno.nome}"?`,
+      description: `Excluir o aluno "${aluno.nome}"? Contas com presenças devem ser mantidas; você pode desativar a matrícula.`,
       confirmLabel: "Excluir",
       danger: true,
     });
@@ -144,8 +153,8 @@ export default function AlunosPage() {
       await excluir(aluno.id);
       toast.success("Aluno removido.");
       if (editTarget?.id === aluno.id) setPanelOpen(false);
-    } catch {
-      toast.error("Erro ao excluir aluno.");
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   }
 
@@ -153,7 +162,7 @@ export default function AlunosPage() {
   function gerarPreviewLote() {
     if (!nomesLote.trim()) return toast.error("Cole pelo menos um nome.");
 
-    const emailsExistentes = new Set(alunos.map(a => a.email.toLowerCase()));
+    const emailsExistentes = new Set(alunos.map(a => (a.email ?? "").toLowerCase()));
     const emailsNoLote = new Set<string>();
     const gerados: { nome: string; email: string; conflito: boolean }[] = [];
 
@@ -162,11 +171,11 @@ export default function AlunosPage() {
     for (const nomeAluno of linhas) {
       // Normaliza: remove acentos e espaços
       const base = nomeAluno.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-      let emailFinal = `${base}@sag.com`;
+      let emailFinal = `${base || "aluno"}@${process.env.NEXT_PUBLIC_BLOQUIN_EMAIL_DOMAIN ?? "bloquin.com"}`;
       let sufixo = 2;
 
       while (emailsExistentes.has(emailFinal) || emailsNoLote.has(emailFinal)) {
-        emailFinal = `${base}${sufixo}@sag.com`;
+        emailFinal = `${base || "aluno"}${sufixo}@${process.env.NEXT_PUBLIC_BLOQUIN_EMAIL_DOMAIN ?? "bloquin.com"}`;
         sufixo++;
       }
 
@@ -192,26 +201,21 @@ export default function AlunosPage() {
     });
     if (!ok) return;
 
-    setSaving(true);
+    setSaving(true); setLoteConcluido(0);
     let sucesso = 0;
-    let erros = 0;
-
-    // Cadastra um por um (como as Threads do Java)
+    const failures: typeof previewLote = [];
     for (const al of previewLote) {
       try {
-        await criar({ nome: al.nome, email: al.email, senha, turmaId: turmaIdForm });
+        const created = await criar({ nome: al.nome, email: al.email, senha, turmaId: turmaIdForm }, false);
+        setCredenciais(old => [...old, { nome: al.nome, email: created.email, senha }]);
         sucesso++;
-      } catch {
-        erros++;
-      }
+      } catch { failures.push(al); }
+      setLoteConcluido(old => old + 1);
     }
-
-    setSaving(false);
-    setPanelOpen(false);
-    fetchAlunos();
-
-    if (erros === 0) toast.success(`${sucesso} alunos cadastrados com sucesso!`);
-    else toast.error(`${sucesso} cadastrados, ${erros} falhas. Verifique duplicatas.`);
+    await fetchAlunos();
+    setSaving(false); setPreviewLote(failures);
+    if (!failures.length) { setPanelOpen(false); toast.success(`${sucesso} alunos cadastrados. Baixe a lista de acessos.`); }
+    else { setNomesLote(failures.map(a => a.nome).join("\n")); toast.error(`${sucesso} cadastrados, ${failures.length} falhas. A lista mantém apenas os alunos que faltam.`); }
   }
 
   const columns: Column<Aluno>[] = [
@@ -220,9 +224,10 @@ export default function AlunosPage() {
       header: "Nome",
       render: (a) => <span className="font-semibold text-[#1f2d3a]">{a.nome}</span>,
     },
-    { key: "email", header: "E-mail" },
+    { key: "email", header: "Login no Bloquin" },
     ...(admin
       ? [
+          { key: "matricula", header: "Matrícula", render: (a: Aluno) => <Badge variant={a.entityStatus === "ATIVO" ? "green" : "gray"}>{a.entityStatus === "ATIVO" ? "Ativa" : "Inativa"}</Badge> },
           {
             key: "situacao",
             header: "Situação",
@@ -269,6 +274,7 @@ export default function AlunosPage() {
           actions={
             admin && (
               <>
+                {!!credenciais.length && <Button variant="secondary" onClick={baixarAcessos}><Download size={14} /> Acessos criados ({credenciais.length})</Button>}
                 <Button onClick={abrirNovo} size="md">
                   <Plus size={14} /> Novo Aluno
                 </Button>
@@ -302,6 +308,7 @@ export default function AlunosPage() {
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
       >
+        <fieldset disabled={saving} className="min-w-0">
         {formMode === "lote" ? (
           // --- FORMULÁRIO DE LOTE ---
           <div className="space-y-4">
@@ -315,7 +322,7 @@ export default function AlunosPage() {
               />
             </div>
 
-            <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)}
+            <Select label="Escola" value={escolaIdForm} onChange={(e) => { setEscolaIdForm(e.target.value); setTurmaIdForm(""); }}
               options={[{value:"", label:"Selecione a escola..."}, ...escolas.map(e => ({ value: e.id, label: e.nome }))]}
             />
             <Select label="Turma" value={turmaIdForm} onChange={(e) => setTurmaIdForm(e.target.value)} disabled={turmasDisponiveis.length === 0}
@@ -324,7 +331,7 @@ export default function AlunosPage() {
 
             <Input label="Senha padrão para todos" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Min. 6 caracteres" />
 
-            <Button onClick={gerarPreviewLote} variant="secondary" className="w-full justify-center">Pré-visualizar E-mails</Button>
+            <Button onClick={gerarPreviewLote} variant="secondary" className="w-full justify-center">Pré-visualizar acessos</Button>
 
             {previewLote.length > 0 && (
               <div className="mt-4 overflow-hidden rounded-lg border border-[#e3ebf1]">
@@ -337,7 +344,7 @@ export default function AlunosPage() {
                   ))}
                 </div>
                 <Button onClick={handleSalvarLote} loading={saving} variant="success" className="w-full justify-center rounded-none">
-                  ✓ Cadastrar Todos
+                  {saving ? `Cadastrando ${loteConcluido}/${previewLote.length}` : "Cadastrar todos"}
                 </Button>
               </div>
             )}
@@ -346,14 +353,15 @@ export default function AlunosPage() {
           // --- FORMULÁRIO INDIVIDUAL ---
           <div className="space-y-4">
             <Input label="Nome" value={nome} onChange={(e) => setNome(e.target.value)} disabled={!admin} />
-            <Input label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!admin || formMode === "edit"} />
+            <Input hint={formMode === "new" ? "Ex.: anasilva. Você também pode informar um e-mail completo." : "Use este e-mail para entrar no Bloquin."} label="Usuário ou e-mail no Bloquin" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!admin || formMode === "edit"} />
 
             {admin && (
               <Input label={formMode === "new" ? "Senha inicial" : "Nova senha (opcional)"} type="password" value={senha} onChange={(e) => setSenha(e.target.value)} placeholder={formMode === "new" ? "Mínimo de 6 caracteres" : "Deixe em branco para manter"} />
             )}
 
+            {formMode === "edit" && <Select label="Situação da matrícula" value={entityStatus} disabled={!admin} onChange={e => setEntityStatus(e.target.value)} options={[{ value: "ATIVO", label: "Ativa · incluir nas novas chamadas" }, { value: "INATIVO", label: "Inativa · manter histórico" }, ...(entityStatus === "ENCERRADO" ? [{ value: "ENCERRADO", label: "Encerrada" }] : [])]} />}
             <div className="border-t border-[#e3ebf1] pt-2">
-              <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin}
+              <Select label="Escola" value={escolaIdForm} onChange={(e) => { setEscolaIdForm(e.target.value); setTurmaIdForm(""); }} disabled={!admin}
                 options={[{value:"", label:"Selecione a escola..."}, ...escolas.map(e => ({ value: e.id, label: e.nome }))]}
               />
               <Select label="Turma" value={turmaIdForm} onChange={(e) => setTurmaIdForm(e.target.value)} disabled={!admin || turmasDisponiveis.length === 0}
@@ -370,6 +378,7 @@ export default function AlunosPage() {
             )}
           </div>
         )}
+        </fieldset>
       </SidePanel>
     </div>
   );

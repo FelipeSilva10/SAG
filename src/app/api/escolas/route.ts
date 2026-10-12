@@ -1,85 +1,28 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// API route: /api/escolas
-// Equivalente ao EscolasDAO.java
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
-import type { Escola } from "@/lib/types";
-import {
-  getRequestSession,
-  requireRole,
-  resolveProfessorId,
-} from "@/lib/request-authorization";
+import { mapSchool } from "@/lib/course-data";
+import { schoolFields } from "@/lib/course-validation";
+import { courseFailure } from "@/lib/course-api";
+import { requireSession, requireRole, resolveProfessorId } from "@/lib/request-authorization";
 
-// GET /api/escolas?professorId=xxx  (omitir para admin → todas)
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const session = getRequestSession(request);
-  if (!session) {
-    return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
-  }
-  const professorId = resolveProfessorId(
-    session,
-    searchParams.get("professorId"),
-  );
-
+  const session = requireSession(request);
+  if (session instanceof NextResponse) return session;
   try {
-    let rows;
-
-    if (professorId) {
-      // Escolas das turmas do professor (equivalente a listarPorProfessor)
-      rows = await sql`
-        SELECT DISTINCT e.id, e.nome, e.status, COALESCE(e.tipo, 'PUBLICA') AS tipo
-        FROM escolas e
-        JOIN turmas t ON t.escola_id = e.id
-        WHERE t.professor_id = ${professorId}::uuid
-        ORDER BY e.nome ASC
-      `;
-    } else {
-      // Todas as escolas (admin)
-      rows = await sql`
-        SELECT id, nome, status, COALESCE(tipo, 'PUBLICA') AS tipo
-        FROM escolas
-        ORDER BY nome ASC
-      `;
-    }
-
-    const escolas: Escola[] = rows.map((r) => ({
-      id: r.id,
-      nome: r.nome,
-      status: r.status,
-      tipo: r.tipo,
-      tipoLabel: r.tipo === "PRIVADA" ? "Privada" : "Pública",
-    }));
-
-    return NextResponse.json(escolas);
-  } catch (error) {
-    console.error("[GET /api/escolas]", error);
-    return NextResponse.json({ error: "Erro ao buscar escolas." }, { status: 500 });
-  }
+    const professorId = resolveProfessorId(session, request.nextUrl.searchParams.get("professorId"));
+    const rows = await sql`select e.id, e.nome, e.status, e.tipo, e.data_inicio::text, e.data_fim::text, e.coordenador, e.contato
+      from escolas e where (${professorId}::uuid is null or exists (select 1 from turmas t where t.escola_id = e.id and t.professor_id = ${professorId}::uuid)) order by e.nome`;
+    return NextResponse.json(rows.map(mapSchool));
+  } catch (error) { return courseFailure(error, "[GET escolas]"); }
 }
 
-// POST /api/escolas — criar escola
 export async function POST(request: NextRequest) {
   const session = requireRole(request, "ADMIN");
   if (session instanceof NextResponse) return session;
-
   try {
-    const { nome, tipo = "PUBLICA" } = await request.json();
-
-    if (!nome?.trim()) {
-      return NextResponse.json({ error: "Nome é obrigatório." }, { status: 400 });
-    }
-
-    await sql`
-      INSERT INTO escolas (nome, status, tipo)
-      VALUES (${nome.trim()}, 'ativo', ${tipo})
-    `;
-
+    const f = schoolFields(await request.json());
+    await sql`insert into escolas (nome, tipo, data_inicio, data_fim, coordenador, contato)
+      values (${f.nome}, ${f.tipo}, ${f.dataInicio}::date, ${f.dataFim}::date, ${f.coordenador}, ${f.contato})`;
     return NextResponse.json({ ok: true }, { status: 201 });
-  } catch (error) {
-    console.error("[POST /api/escolas]", error);
-    return NextResponse.json({ error: "Erro ao criar escola." }, { status: 500 });
-  }
+  } catch (error) { return courseFailure(error, "[POST escolas]"); }
 }

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import sql from "@/lib/db";
 import type { ChamadaPresenca } from "@/lib/types";
+import { courseFailure } from "@/lib/course-api";
+import { CourseError, uuid } from "@/lib/course-validation";
 import { getRequestSession, hasRole } from "@/lib/request-authorization";
  
 export async function GET(
@@ -41,46 +43,27 @@ export async function GET(
   }
 }
  
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const { presencas } = await request.json() as { presencas: ChamadaPresenca[] };
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = getRequestSession(request);
+  if (!session) return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
   try {
-    const session = getRequestSession(request);
-    if (!session) {
-      return NextResponse.json({ error: "Sessão inválida." }, { status: 401 });
+    const id = uuid((await params).id);
+    const { presencas } = await request.json() as { presencas: ChamadaPresenca[] };
+    if (!Array.isArray(presencas) || !presencas.length) throw new CourseError("Presenças inválidas.");
+    const ids = new Set<string>();
+    for (const entry of presencas) {
+      uuid(entry?.id, "Presença");
+      if (typeof entry.presente !== "boolean" || ids.has(entry.id!)) throw new CourseError("Presenças inválidas ou repetidas.");
+      ids.add(entry.id!);
     }
-
-    const owned = await sql`
-      SELECT 1
-      FROM chamadas
-      WHERE id = ${id}::uuid
-        AND (
-          ${hasRole(session.actor, "ADMIN")}
-          OR professor_id = ${session.actor.id}::uuid
-        )
-      LIMIT 1
-    `;
-    if (owned.length === 0) {
-      return NextResponse.json(
-        { error: "Chamada não encontrada ou não autorizada." },
-        { status: 404 },
-      );
-    }
-
-    for (const p of presencas) {
-      if (!p.id) continue;
-      await sql`
-        UPDATE chamada_presencas SET presente = ${p.presente}
-        WHERE id = ${p.id}::uuid
-          AND chamada_id = ${id}::uuid
-      `;
-    }
+    await sql.begin(async tx => {
+      const owned = await tx`select c.id from chamadas c where c.id = ${id}::uuid
+        and (${hasRole(session.actor, "ADMIN")} or c.professor_id = ${session.actor.id}::uuid) for update`;
+      if (!owned.length) throw new CourseError("Chamada não encontrada ou não autorizada.", 404);
+      const existing = await tx`select id from chamada_presencas where chamada_id = ${id}::uuid`;
+      if (existing.length !== ids.size || existing.some(p => !ids.has(p.id))) throw new CourseError("A lista de presenças mudou. Abra a chamada novamente.", 409);
+      for (const p of presencas) await tx`update chamada_presencas set presente = ${p.presente} where id = ${p.id}::uuid and chamada_id = ${id}::uuid`;
+    });
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[PATCH /api/chamada/[id]/presencas]", error);
-    return NextResponse.json({ error: "Erro ao atualizar." }, { status: 500 });
-  }
+  } catch (error) { return courseFailure(error, "[PATCH presencas]"); }
 }

@@ -6,7 +6,7 @@ import { useSessionStore } from "@/store/session";
 import {
   Home, School, Users, GraduationCap, BookUser,
   CalendarDays, ClipboardCheck, BookOpen,
-  Clock, LogOut, Menu, X,
+  Clock, LogOut, Menu, X, FileDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -33,8 +33,10 @@ const NAV_GESTAO: NavItem[] = [
 ];
 
 const NAV_MODULOS: NavItem[] = [
+  { label: "Calendário", href: "/calendario", icon: <CalendarDays size={16} /> },
   { label: "Cronograma", href: "/cronograma", icon: <CalendarDays size={16} /> },
-  { label: "Chamada", href: "/chamada", icon: <ClipboardCheck size={16} />, requiresRole: ["TEACHER"] },
+  { label: "Chamada", href: "/chamada", icon: <ClipboardCheck size={16} /> },
+  { label: "Relatórios", href: "/relatorios", icon: <FileDown size={16} /> },
   { label: "Diário de Aulas", href: "/diario", icon: <BookOpen size={16} />, requiresRole: ["TEACHER"] },
   { label: "Horas", href: "/horas", icon: <Clock size={16} /> },
 ];

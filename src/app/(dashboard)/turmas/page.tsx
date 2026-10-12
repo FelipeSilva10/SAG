@@ -1,346 +1,113 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Plus, Trash2, Pencil, Users, School, UserRound, CalendarDays, SearchX } from "lucide-react";
-import { useTurmas } from "@/hooks/useTurmas";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { CalendarDays, ClipboardCheck, Plus, School, Trash2, Users } from "lucide-react";
+import toast from "react-hot-toast";
+import { useTurmas, type DadosTurma } from "@/hooks/useTurmas";
 import { useEscolas } from "@/hooks/useEscolas";
 import { useSessionStore } from "@/store/session";
-import {
-  Badge,
-  Button,
-  EmptyState,
-  Input,
-  Select,
-  SidePanel,
-  PageHeader,
-  StatCard,
-  Table,
-  type Column,
-  useConfirmDialog,
-} from "@/components/ui";
-import type { Turma } from "@/lib/types";
-import toast from "react-hot-toast";
+import { Badge, Button, EmptyState, Input, PageHeader, Select, SidePanel, StatCard, Table, type Column, useConfirmDialog } from "@/components/ui";
+import { ABREV_DIA, DIAS_SEMANA, type HorarioTurma, type ProgressoCurso, type Turma } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
+import { todayInSaoPaulo } from "@/lib/course-calendar";
 
-type FormMode = "new" | "edit";
-
-const DIAS_SEMANA_OPCOES = [
-  { value: "SEGUNDA", label: "Segunda-feira" },
-  { value: "TERÇA", label: "Terça-feira" },
-  { value: "QUARTA", label: "Quarta-feira" },
-  { value: "QUINTA", label: "Quinta-feira" },
-  { value: "SEXTA", label: "Sexta-feira" },
-  { value: "SÁBADO", label: "Sábado" },
-];
+const emptySchedule = (): HorarioTurma => ({ diaSemana: "SEGUNDA", horarioInicio: "", horarioFim: "" });
 
 export default function TurmasPage() {
-  const { turmas, loading, fetchTurmas, criar, atualizar, excluir } = useTurmas();
-  const { escolas } = useEscolas(); // Reutilizando as escolas para o select
-  const { isAdmin } = useSessionStore();
-  const confirm = useConfirmDialog();
+  const { turmas, loading, salvar, excluir } = useTurmas();
+  const { escolas } = useEscolas();
+  const { sessao, isAdmin } = useSessionStore();
   const admin = isAdmin();
-
+  const router = useRouter();
+  const confirm = useConfirmDialog();
   const [busca, setBusca] = useState("");
-  const [escolaFiltro, setEscolaFiltro] = useState<string>("");
+  const [escolaFiltro, setEscolaFiltro] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
-  const [formMode, setFormMode] = useState<FormMode>("new");
-  const [editTarget, setEditTarget] = useState<Turma | null>(null);
-
-  // Estado dos Professores (Buscado apenas se for Admin)
+  const [target, setTarget] = useState<Turma | null>(null);
   const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
-
-  // Estados do Form
-  const [nome, setNome] = useState("");
-  const [anoLetivo, setAnoLetivo] = useState(new Date().getFullYear().toString());
-  const [escolaIdForm, setEscolaIdForm] = useState("");
-  const [professorIdForm, setProfessorIdForm] = useState("");
-  const [diaSemanaForm, setDiaSemanaForm] = useState("SEGUNDA");
-  const [horarioInicioForm, setHorarioInicioForm] = useState("");
-  const [horarioFimForm, setHorarioFimForm] = useState("");
+  const [progresso, setProgresso] = useState<ProgressoCurso[]>([]);
+  const [form, setForm] = useState<DadosTurma>({ escolaId: "", nome: "", anoLetivo: todayInSaoPaulo().slice(0, 4), professorId: null, dataInicio: null, dataFim: null, totalAulas: null, situacao: "ATIVA", horarios: [emptySchedule()] });
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
 
-  // Busca lista de professores para o ComboBox (apenas admin)
   useEffect(() => {
-    if (isAdmin()) {
-      fetch("/api/professores")
-        .then((res) => res.json())
-        .then(setProfessores)
-        .catch(console.error);
-    }
-  }, [isAdmin]);
-
-  // Recarrega lista de turmas se o Admin mudar o filtro de escola lá no cabeçalho
+    if (!admin) return;
+    fetch("/api/professores").then(async res => {
+      if (!res.ok) throw new Error("Erro ao buscar professores.");
+      setProfessores(await res.json());
+    }).catch(error => toast.error(error.message));
+  }, [admin]);
   useEffect(() => {
-    if (isAdmin()) fetchTurmas(escolaFiltro);
-  }, [escolaFiltro, isAdmin, fetchTurmas]);
+    let active = true;
+    fetch(`/api/calendario?inicio=${todayInSaoPaulo()}&fim=${todayInSaoPaulo()}`).then(async res => {
+      if (!res.ok) return;
+      const data = await res.json();
+      if (active) setProgresso(data.progresso);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [turmas]);
 
-  // Filtro na tabela (Equivalente ao FilteredList do Java)
-  const turmasFiltradas = useMemo(() => {
-    const t = busca.trim().toLowerCase();
-    if (!t) return turmas;
-    return turmas.filter(
-      (turma) =>
-        turma.nome.toLowerCase().includes(t) ||
-        turma.escolaNome.toLowerCase().includes(t) ||
-        turma.professorNome.toLowerCase().includes(t)
-    );
-  }, [turmas, busca]);
-
-  const escolasComTurma = new Set(turmas.map((turma) => turma.escolaId)).size;
-  const turmasSemProfessor = turmas.filter((turma) => !turma.professorId).length;
-
-  function abrirNova() {
-    setFormMode("new");
-    setEditTarget(null);
-    setNome("");
-    setAnoLetivo(new Date().getFullYear().toString());
-    setEscolaIdForm(escolaFiltro || (escolas.length > 0 ? escolas[0].id : ""));
-    setProfessorIdForm("");
-    setDiaSemanaForm("SEGUNDA");
-    setHorarioInicioForm("");
-    setHorarioFimForm("");
-    setPanelOpen(true);
-  }
-
-  function abrirDetalhe(turma: Turma) {
-    setFormMode("edit");
-    setEditTarget(turma);
-    setNome(turma.nome);
-    setAnoLetivo(turma.anoLetivo);
-    setEscolaIdForm(turma.escolaId);
-    setProfessorIdForm(turma.professorId || "");
-    setDiaSemanaForm("SEGUNDA");
-    setHorarioInicioForm("");
-    setHorarioFimForm("");
-    setPanelOpen(true);
-  }
-
-  function fecharPanel() {
-    setPanelOpen(false);
-    setEditTarget(null);
-  }
-
-  async function handleSalvar() {
-    if (!nome.trim() || !anoLetivo.trim() || !escolaIdForm) {
-      toast.error("Preencha nome, ano letivo e escola.");
-      return;
-    }
-    if (formMode === "new" && (!professorIdForm || !horarioInicioForm || !horarioFimForm)) {
-      toast.error("Informe o professor e o horário da turma.");
-      return;
-    }
-    if (formMode === "new" && horarioInicioForm >= horarioFimForm) {
-      toast.error("O horário de término deve ser posterior ao de início.");
-      return;
-    }
-    setSaving(true);
-    try {
-      if (formMode === "new") {
-        await criar(escolaIdForm, nome.trim(), anoLetivo.trim(), professorIdForm, {
-          diaSemana: diaSemanaForm,
-          horarioInicio: horarioInicioForm,
-          horarioFim: horarioFimForm,
-        });
-        toast.success("Turma cadastrada com sucesso!");
-      } else if (editTarget) {
-        const profId = professorIdForm === "" ? null : professorIdForm;
-        await atualizar(editTarget.id, escolaIdForm, nome.trim(), anoLetivo.trim(), profId);
-        toast.success("Turma atualizada!");
-      }
-      fecharPanel();
-    } catch (err: unknown) {
-      toast.error((err as Error).message || "Erro ao salvar.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleExcluir(turma: Turma) {
-    const ok = await confirm({
-      title: "Excluir turma",
-      description: `Excluir a turma "${turma.nome}"?`,
-      confirmLabel: "Excluir",
-      danger: true,
+  const filtered = useMemo(() => turmas.filter(t => (!escolaFiltro || t.escolaId === escolaFiltro) && `${t.nome} ${t.escolaNome} ${t.professorNome}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR"))), [turmas, escolaFiltro, busca]);
+  const change = <K extends keyof DadosTurma>(key: K, value: DadosTurma[K]) => setForm(old => ({ ...old, [key]: value }));
+  function open(turma?: Turma) {
+    setTarget(turma ?? null);
+    const school = escolas.find(e => e.id === escolaFiltro) ?? escolas[0];
+    setForm(turma ? { ...turma, horarios: turma.horarios.length ? turma.horarios.map(h => ({ ...h })) : [emptySchedule()] } : {
+      escolaId: school?.id ?? "", nome: "", anoLetivo: todayInSaoPaulo().slice(0, 4),
+      professorId: professores.some(p => p.id === sessao?.id) ? sessao!.id : null,
+      dataInicio: school?.dataInicio && school.dataInicio > todayInSaoPaulo() ? school.dataInicio : todayInSaoPaulo(),
+      dataFim: null, totalAulas: null, situacao: "ATIVA", horarios: [emptySchedule()],
     });
-    if (!ok) return;
-    setDeleting(turma.id);
-    try {
-      await excluir(turma.id);
-      toast.success("Turma removida.");
-      if (editTarget?.id === turma.id) fecharPanel();
-    } catch (err: unknown) {
-      toast.error((err as Error).message || "Erro ao excluir turma.");
-    } finally {
-      setDeleting(null);
-    }
+    setPanelOpen(true);
   }
-
+  async function save() {
+    setSaving(true);
+    try { await salvar(form, target?.id); toast.success(target ? "Turma atualizada." : "Turma criada com seus horários."); setPanelOpen(false); }
+    catch (error) { toast.error((error as Error).message); }
+    finally { setSaving(false); }
+  }
+  async function remove(turma: Turma) {
+    if (!await confirm({ title: "Excluir turma", description: `Excluir ${turma.nome}? Turmas com alunos ou chamadas devem ser encerradas para preservar o histórico.`, confirmLabel: "Excluir", danger: true })) return;
+    try { await excluir(turma.id); toast.success("Turma excluída."); setPanelOpen(false); }
+    catch (error) { toast.error((error as Error).message); }
+  }
   const columns: Column<Turma>[] = [
-    {
-      key: "nome",
-      header: "Turma",
-      render: (turma) => (
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-[#e8f1f6] text-[#23638c]">
-            <Users size={16} />
-          </div>
-          <div>
-            <p className="font-bold text-[#1f2d3a]">{turma.nome}</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-[#8ea0b0]">
-              <CalendarDays size={12} /> Ano letivo {turma.anoLetivo}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: "escolaNome",
-      header: "Escola",
-      render: (turma) => (
-        <div className="flex items-center gap-2 text-[#45566a]">
-          <School size={15} className="text-[#8ea0b0]" />
-          <span>{turma.escolaNome}</span>
-        </div>
-      ),
-    },
-    {
-      key: "professorNome",
-      header: "Professor responsável",
-      render: (turma) => (
-        <div className="flex items-center gap-2 text-[#45566a]">
-          <UserRound size={15} className="text-[#8ea0b0]" />
-          <span>{turma.professorNome || "Nenhum professor"}</span>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (turma) => (
-        <Badge variant={turma.professorId ? "green" : "amber"} dot>
-          {turma.professorId ? "Atribuída" : "Pendente"}
-        </Badge>
-      ),
-    },
-    ...(admin
-      ? [
-          {
-            key: "acoes",
-            header: "",
-            width: "w-24",
-            render: (turma: Turma) => (
-              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  onClick={() => abrirDetalhe(turma)}
-                  aria-label={`Editar ${turma.nome}`}
-                  className="rounded-md p-2 text-[#8ea0b0] transition hover:bg-[#e8f1f6] hover:text-[#23638c]"
-                >
-                  <Pencil size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleExcluir(turma)}
-                  disabled={deleting === turma.id}
-                  aria-label={`Excluir ${turma.nome}`}
-                  className="rounded-lg p-2 text-[#8ea0b0] transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
-            ),
-          },
-        ]
-      : []),
+    { key: "nome", header: "Turma", render: t => <div><p className="font-bold">{t.nome}</p><p className="mt-1 text-xs text-[#62798a]">{t.anoLetivo} · {t.professorNome}</p></div> },
+    { key: "escolaNome", header: "Escola" },
+    { key: "horarios", header: "Dias e horários", render: t => <div className="space-y-1">{t.horarios.length ? t.horarios.map((h, i) => <p key={h.id ?? i} className="text-xs">{ABREV_DIA[h.diaSemana]} · {h.horarioInicio}–{h.horarioFim}</p>) : "Definir horários"}</div> },
+    { key: "periodo", header: "Período", render: t => <div className="text-xs"><p>{formatDate(t.dataInicio)}</p><p className="text-[#62798a]">{t.dataFim ? `Até ${formatDate(t.dataFim)}` : t.totalAulas ? `${t.totalAulas} aulas` : "Contínuo"}</p></div> },
+    { key: "progresso", header: "Andamento", render: t => { const p = progresso.find(p => p.turmaId === t.id); return <div><Badge variant={t.situacao === "ENCERRADA" ? "gray" : "green"}>{t.situacao === "ENCERRADA" ? "Encerrada" : "Ativa"}</Badge>{p && <p className="mt-1 text-xs">{p.realizadas}{p.total != null ? ` de ${p.total}` : ""} aulas registradas{p.pendentes > 0 && <span className="block text-amber-700">{p.pendentes} sem chamada</span>}</p>}</div>; } },
+    { key: "acoes", header: "", render: t => <Button size="sm" variant="secondary" onClick={e => { e.stopPropagation(); router.push(`/calendario?turmaId=${t.id}`); }}><CalendarDays size={14} /> Calendário</Button> },
   ];
-
-  return (
-    <div className="flex h-full">
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <PageHeader
-          title="Turmas"
-          searchValue={busca}
-          onSearchChange={setBusca}
-          searchPlaceholder="Buscar turma, escola ou professor"
-          actions={
-            <>
-              {admin && (
-                <div className="w-full sm:w-56">
-                  <Select
-                    aria-label="Filtrar por escola"
-                    value={escolaFiltro}
-                    onChange={(e) => setEscolaFiltro(e.target.value)}
-                    options={[
-                      { value: "", label: "Todas as escolas" },
-                      ...escolas.map((e) => ({ value: e.id, label: e.nome })),
-                    ]}
-                  />
-                </div>
-              )}
-              {admin && (
-                <Button onClick={abrirNova} size="md">
-                  <Plus size={16} /> Nova turma
-                </Button>
-              )}
-            </>
-          }
-        />
-
-        <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-6">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatCard label="Total de turmas" value={turmas.length} icon={<Users size={18} />} tone="accent" />
-            <StatCard label="Escolas atendidas" value={escolasComTurma} icon={<School size={18} />} tone="accent" />
-            <StatCard label="Sem professor" value={turmasSemProfessor} icon={<UserRound size={18} />} tone={turmasSemProfessor ? "amber" : "green"} />
-          </div>
-
-          {turmasFiltradas.length === 0 && !loading ? (
-            <EmptyState
-              icon={<SearchX size={22} />}
-              title={busca || escolaFiltro ? "Nenhuma turma encontrada" : "Você ainda não tem turmas"}
-              action={admin && !busca && !escolaFiltro ? <Button size="sm" onClick={abrirNova}><Plus size={14} /> Nova turma</Button> : undefined}
-            />
-          ) : (
-            <Table<Turma>
-              columns={columns}
-              data={turmasFiltradas}
-              rowKey={(t) => t.id}
-              loading={loading}
-              onRowClick={abrirDetalhe}
-              rowClassName={(t) => (editTarget?.id === t.id ? "bg-[#e8f1f6]" : "")}
-              pageSize={20}
-            />
-          )}
-        </div>
+  return <div className="flex h-full">
+    <div className="flex min-w-0 flex-1 flex-col">
+      <PageHeader title="Turmas e cursos" searchValue={busca} onSearchChange={setBusca} searchPlaceholder="Buscar turma, escola ou professor" actions={<><Select aria-label="Filtrar escola" value={escolaFiltro} onChange={e => setEscolaFiltro(e.target.value)} options={[{ value: "", label: "Todas as escolas" }, ...escolas.map(e => ({ value: e.id, label: e.nome }))]} />{admin && <Button onClick={() => open()}><Plus size={16} /> Nova turma</Button>}</>} />
+      <div className="flex-1 space-y-4 overflow-auto p-4 sm:p-6">
+        <div className="grid gap-3 sm:grid-cols-3"><StatCard label="Turmas ativas" value={turmas.filter(t => t.situacao === "ATIVA").length} icon={<Users size={18} />} tone="accent" /><StatCard label="Escolas atendidas" value={new Set(turmas.map(t => t.escolaId)).size} icon={<School size={18} />} tone="accent" /><StatCard label="Cursos encerrados" value={turmas.filter(t => t.situacao === "ENCERRADA").length} icon={<ClipboardCheck size={18} />} tone="green" /></div>
+        {!filtered.length && !loading ? <EmptyState icon={<Users size={22} />} title="Nenhuma turma encontrada" /> : <Table columns={columns} data={filtered} rowKey={t => t.id} onRowClick={t => open(t)} loading={loading} pageSize={20} />}
       </div>
-
-      <SidePanel
-        title={formMode === "new" ? "Nova turma" : admin ? "Editar turma" : "Detalhes da turma"}
-        open={panelOpen}
-        onClose={fecharPanel}
-        width="w-80 sm:w-[26rem]"
-      >
-        <div className="space-y-4">
-          <Input label="Nome da turma" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: 1º Ano A" disabled={!admin} />
-          <Input label="Ano letivo" value={anoLetivo} onChange={(e) => setAnoLetivo(e.target.value)} placeholder="Ex.: 2026" inputMode="numeric" disabled={!admin} />
-          <Select label="Escola" value={escolaIdForm} onChange={(e) => setEscolaIdForm(e.target.value)} disabled={!admin} options={escolas.map((e) => ({ value: e.id, label: e.nome }))} />
-          {admin && <Select label="Professor responsável" value={professorIdForm} onChange={(e) => setProfessorIdForm(e.target.value)} options={[{ value: "", label: formMode === "new" ? "Selecione o professor" : "Ainda não atribuir" }, ...professores.map((p) => ({ value: p.id, label: p.nome }))]} />}
-          {admin && formMode === "new" && (
-            <>
-              <Select label="Dia da semana" value={diaSemanaForm} onChange={(e) => setDiaSemanaForm(e.target.value)} options={DIAS_SEMANA_OPCOES} />
-              <div className="grid grid-cols-2 gap-3">
-                <Input label="Horário de início" type="time" value={horarioInicioForm} onChange={(e) => setHorarioInicioForm(e.target.value)} />
-                <Input label="Horário de término" type="time" value={horarioFimForm} onChange={(e) => setHorarioFimForm(e.target.value)} />
-              </div>
-            </>
-          )}
-        </div>
-        {admin && (
-          <div className="space-y-3 border-t border-[#e3ebf1] pt-5">
-            <Button onClick={handleSalvar} loading={saving} className="w-full justify-center">{formMode === "new" ? "Criar turma" : "Salvar alterações"}</Button>
-            {formMode === "edit" && editTarget && <Button variant="ghost" onClick={() => handleExcluir(editTarget)} loading={deleting === editTarget.id} className="w-full justify-center text-red-600 hover:bg-red-50 hover:text-red-700"><Trash2 size={14} /> Excluir turma</Button>}
-          </div>
-        )}
-      </SidePanel>
     </div>
-  );
+    <SidePanel title={target ? admin ? "Editar turma" : "Detalhes da turma" : "Nova turma"} open={panelOpen} onClose={() => setPanelOpen(false)} width="w-full sm:w-[30rem]">
+      <div className="space-y-4">
+        <Input label="Nome da turma / curso" value={form.nome} onChange={e => change("nome", e.target.value)} disabled={!admin} placeholder="Ex.: Programação · manhã" />
+        <div className="grid grid-cols-2 gap-3"><Input label="Ano letivo" value={form.anoLetivo} onChange={e => change("anoLetivo", e.target.value)} disabled={!admin} /><Select label="Situação" value={form.situacao} onChange={e => change("situacao", e.target.value as Turma["situacao"])} disabled={!admin} options={[{ value: "ATIVA", label: "Ativa" }, { value: "ENCERRADA", label: "Encerrada" }]} /></div>
+        <Select label="Escola" value={form.escolaId} onChange={e => change("escolaId", e.target.value)} disabled={!admin} options={[{ value: "", label: "Selecione" }, ...escolas.map(e => ({ value: e.id, label: e.nome }))]} />
+        {admin && <Select label="Professor responsável" value={form.professorId ?? ""} onChange={e => change("professorId", e.target.value || null)} options={[{ value: "", label: "Selecione" }, ...professores.map(p => ({ value: p.id, label: p.nome }))]} />}
+        <div className="grid grid-cols-2 gap-3"><Input label="Início do curso" type="date" value={form.dataInicio ?? ""} onChange={e => change("dataInicio", e.target.value || null)} disabled={!admin} /><Input label="Término (opcional)" type="date" min={form.dataInicio ?? undefined} value={form.dataFim ?? ""} onChange={e => change("dataFim", e.target.value || null)} disabled={!admin} /></div>
+        <Input label="Quantidade de aulas (opcional)" type="number" min={1} max={1000} value={form.totalAulas ?? ""} onChange={e => change("totalAulas", e.target.value ? Number(e.target.value) : null)} hint="Ex.: 22. Sem término e sem quantidade, o curso é contínuo." disabled={!admin} />
+        <div className="space-y-3 border-t border-[#e3ebf1] pt-4">
+          <p className="text-sm font-bold">Dias e horários de aula</p>
+          {form.horarios.map((horario, index) => <div key={index} className="space-y-2 rounded-lg border border-[#e3ebf1] bg-[#f3f7fa] p-3">
+            <div className="flex items-end gap-2"><div className="flex-1"><Select label="Dia" value={horario.diaSemana} disabled={!admin} onChange={e => change("horarios", form.horarios.map((h, i) => i === index ? { ...h, diaSemana: e.target.value as HorarioTurma["diaSemana"] } : h))} options={DIAS_SEMANA.filter(d => d === horario.diaSemana || !form.horarios.some(h => h.diaSemana === d)).map(d => ({ value: d, label: d.charAt(0) + d.slice(1).toLocaleLowerCase("pt-BR") }))} /></div>{admin && form.horarios.length > 1 && <Button variant="ghost" aria-label="Remover dia" onClick={() => change("horarios", form.horarios.filter((_, i) => i !== index))}><Trash2 size={15} /></Button>}</div>
+            <div className="grid grid-cols-2 gap-2">{(["horarioInicio", "horarioFim"] as const).map(key => <Input key={key} type="time" label={key === "horarioInicio" ? "Início" : "Término"} disabled={!admin} value={horario[key]} onChange={e => change("horarios", form.horarios.map((h, i) => i === index ? { ...h, [key]: e.target.value } : h))} />)}</div>
+            {(horario.dataInicio || horario.dataFim) && <p className="text-xs text-[#62798a]">Horário válido: {formatDate(horario.dataInicio)} a {formatDate(horario.dataFim)}. Ajuste esse período no cronograma.</p>}
+          </div>)}
+          {admin && form.horarios.length < 7 && <Button variant="secondary" size="sm" onClick={() => change("horarios", [...form.horarios, { ...emptySchedule(), diaSemana: DIAS_SEMANA.find(d => !form.horarios.some(h => h.diaSemana === d))! }])}><Plus size={14} /> Adicionar dia</Button>}
+        </div>
+        {target && <div className="flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={() => router.push(`/chamada?turmaId=${target.id}`)}><ClipboardCheck size={14} /> Chamada</Button><Button size="sm" variant="secondary" onClick={() => router.push(`/relatorios?escolaId=${target.escolaId}`)}>Relatório da escola</Button></div>}
+        {admin && <Button onClick={save} loading={saving} className="w-full justify-center">{target ? "Salvar alterações" : "Criar turma"}</Button>}
+        {admin && target && <Button variant="ghost" onClick={() => remove(target)} className="w-full justify-center text-red-600"><Trash2 size={14} /> Excluir turma sem alunos ou chamadas</Button>}
+      </div>
+    </SidePanel>
+  </div>;
 }
